@@ -34,11 +34,17 @@ function updateCanvasSize() {
 
 let lastMousePos = null
 
+const defaultRadius = 10;
+const shrunkEveryFrameBy = 0.5;
+
+let frameCount = 0;
+
 const circles = []
 
 window.requestAnimationFrame(draw)
 
 function draw() {
+    frameCount++;
     if (circles.length === 0) {
         window.requestAnimationFrame(draw)
         return;
@@ -77,10 +83,10 @@ const onMouseMove = (e) => {
     const y = mouseY - rect.top;
 
     interpolate(x, y)
-    lastMousePos = { x, y }
+    lastMousePos = { x, y , frame: frameCount}
 }
 
-function addCircle(x, y, radius = 10) {
+function addCircle(x, y, radius = defaultRadius) {
     circles.push({
         x,
         y,
@@ -100,8 +106,10 @@ function interpolate(x, y) {
 
     const stepX = (lastX - x) / count;
     const stepY = (lastY - y) / count;
+    const stepRadius = ((frameCount-lastMousePos.frame)*shrunkEveryFrameBy)/count
     for (let i = 0; i < count; i++) {
-        addCircle(x + stepX * i, y + stepY * i)
+        const radius = defaultRadius-stepRadius*i
+        addCircle(x + stepX * i, y + stepY * i, radius)
     }
 }
 canvas.addEventListener("mousemove", onMouseMove)
