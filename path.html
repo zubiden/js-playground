@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Paths</title>
+    <style type="text/css">
+    body,
+    html {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        position: fixed;
+    }
+
+    body {
+        display: flex;
+        flex-direction: column;
+        background-color: black;
+    }
+
+    .inputs {
+        display: flex;
+        padding: 2px 5px;
+    }
+
+    .inputs input {
+        flex-grow: 1;
+        background-color: #222222;
+        outline: none;
+        border: none;
+        color: white;
+        height: 20px;
+    }
+
+    .inputs button {
+        background-color: #111111;
+        color: grey;
+        outline: none;
+        border: none;
+        cursor: pointer;
+    }
+
+    .inputs button:hover {
+        background-color: #060606;
+    }
+
+    .description {
+        padding: 5px;
+        color: grey;
+        border-bottom: 1px solid green
+        font-size: 14px;
+    }
+    </style>
+</head>
+
+<body>
+    <div class="inputs">
+        <input id="input" type="text" placeholder="Enter text..." />
+        <button onclick="clearText()">Clear text</button>
+        <button onclick="resetZoom()">Reset zoom</button>
+    </div>
+    <div class="description">Converts text to bytes. 0 - draw line, 1 - turn right and draw line</div>
+    <canvas id="canvas" />
+</body>
+<script type="text/javascript">
+document.getElementById("input").addEventListener("input", inputUpdated);
+
+const canvas = document.getElementById("canvas")
+const ctx = canvas.getContext("2d")
+
+let scale = 1;
+
+updateCanvasSize();
+
+window.addEventListener("resize", onResize)
+canvas.addEventListener("wheel", zoom)
+
+function onResize() {
+    reOffset();
+    updateCanvasSize();
+    resetZoom();
+    draw(lastBits)
+}
+
+const lineWidth = 10;
+
+let lastBits = "";
+
+var isDown=false;
+var startX,startY;
+var netPanningX=0;
+var netPanningY=0;
+
+function reOffset(){
+  var BB=canvas.getBoundingClientRect();
+  offsetX=BB.left;
+  offsetY=BB.top;        
+}
+var offsetX,offsetY;
+reOffset();
+
+window.onscroll= () => reOffset()
+
+canvas.addEventListener("mousedown", handleMouseDown);
+canvas.addEventListener("mousemove", handleMouseMove);
+canvas.addEventListener("mouseup", handleMouseUp);
+canvas.addEventListener("mouseout", handleMouseOut);
+
+function clearBackground() {
+    ctx.clearRect(0, 0, canvas.width / scale, canvas.height / scale);
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, 0, canvas.width /scale, canvas.height/scale);
+}
+
+function clearText() {
+    document.getElementById("input").value = ""
+    draw("")
+}
+
+function draw(bits) {
+    clearBackground()
+
+    let direction = {
+        x: 0,
+        y: -1
+    }
+
+    let nextCoords = {
+        x: (canvas.width / 2 + netPanningX)/scale,
+        y: (canvas.height / 2 + netPanningY)/scale
+    }
+
+    ctx.strokeStyle = "green";
+    ctx.lineWidth = 2
+
+    ctx.beginPath();
+    ctx.moveTo(nextCoords.x, nextCoords.y);
+    for (let bit of bits) {
+        if (bit === "1") {
+            direction = nextDirection(direction)
+        }
+        nextCoords = {
+            x: nextCoords.x + direction.x * lineWidth,
+            y: nextCoords.y + direction.y * lineWidth
+        }
+        ctx.lineTo(nextCoords.x, nextCoords.y)
+    }
+    ctx.stroke()
+    lastBits = bits;
+}
+
+function nextDirection(last) {
+    if (last.y === -1) {
+        return {
+            x: 1,
+            y: 0
+        }
+    } else if (last.x === 1) {
+        return {
+            x: 0,
+            y: 1
+        }
+    } else if (last.y === 1) {
+        return {
+            x: -1,
+            y: 0
+        }
+    } else {
+        return {
+            x: 0,
+            y: -1
+        }
+    }
+}
+
+function zoom(event) {
+    ctx.scale(1 / scale, 1 / scale); //restore normal scale
+    scale += -0.2 * Math.sign(event.deltaY);
+    if(scale < 0) scale=0.1;
+    ctx.scale(scale, scale)
+    draw(lastBits)
+}
+
+function resetZoom() {
+    ctx.scale(1 / scale, 1 / scale); //restore normal scale
+    scale = 1;
+    netPanningX = 0
+    netPanningY = 0
+    draw(lastBits)
+}
+
+function updateCanvasSize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    clearBackground();
+}
+
+function inputUpdated(event) {
+    draw(textToBin(event.target.value))
+}
+
+function textToBin(text) {
+    let out = ""
+    for (var i = 0; i < text.length; i++) {
+        out += text.charCodeAt(i).toString(2);
+    }
+    return out;
+}
+
+//https://stackoverflow.com/questions/33763273/javascript-canvas-panning-the-canvas
+function handleMouseDown(e) {
+    // tell the browser we're handling this event
+    e.preventDefault();
+    e.stopPropagation();
+
+    startX = parseInt(e.clientX - offsetX);
+    startY = parseInt(e.clientY - offsetY);
+
+    // Put your mousedown stuff here
+    isDown = true;
+}
+
+function handleMouseUp(e) {
+    // tell the browser we're handling this event
+    e.preventDefault();
+    e.stopPropagation();
+
+    mouseX = parseInt(e.clientX - offsetX);
+    mouseY = parseInt(e.clientY - offsetY);
+
+    // Put your mouseup stuff here
+    isDown = false;
+}
+
+function handleMouseOut(e) {
+    // tell the browser we're handling this event
+    e.preventDefault();
+    e.stopPropagation();
+
+    mouseX = parseInt(e.clientX - offsetX);
+    mouseY = parseInt(e.clientY - offsetY);
+
+    // Put your mouseOut stuff here
+    isDown = false;
+}
+
+function handleMouseMove(e) {
+    if (!isDown) { return; }
+    // tell the browser we're handling this event
+    e.preventDefault();
+    e.stopPropagation();
+
+    mouseX = parseInt(e.clientX - offsetX);
+    mouseY = parseInt(e.clientY - offsetY);
+
+    // dx & dy are the distance the mouse has moved since
+    // the last mousemove event
+    var dx = mouseX - startX;
+    var dy = mouseY - startY;
+    startX = mouseX;
+    startY = mouseY;
+
+    // accumulate the net panning done
+    netPanningX += dx;
+    netPanningY += dy;
+
+    draw(lastBits)
+}
+</script>
+
+</html>
