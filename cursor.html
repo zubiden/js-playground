@@ -33,6 +33,7 @@ function updateCanvasSize() {
 }
 
 let lastMousePos = null
+let hideCursor = false
 
 const defaultRadius = 10;
 const shrunkEveryFrameBy = 0.5;
@@ -49,7 +50,7 @@ function draw() {
         window.requestAnimationFrame(draw)
         return;
     }
-    if (lastMousePos) {
+    if (!hideCursor && lastMousePos) {
         addCircle(lastMousePos.x, lastMousePos.y)
     }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -114,6 +115,12 @@ function interpolate(x, y) {
 }
 canvas.addEventListener("mousemove", onMouseMove)
 canvas.addEventListener("touchmove", onMouseMove)
+
+canvas.addEventListener("mouseout", () => {hideCursor=true})
+canvas.addEventListener("mouseover", () => {hideCursor=false})
+
+canvas.addEventListener("touchend", () => {hideCursor=true})
+canvas.addEventListener("touchstart", () => {hideCursor=false})
 </script>
 
 </html>
