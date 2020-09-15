@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Фонеми</title>
+	<style type="text/css">
+		body {
+			display: flex;
+			flex-direction: column;
+		}
+
+		textarea {
+			min-height: 150px;
+			margin: 20px;
+		}
+	</style>
+</head>
+<body>
+	Текст українською
+	<textarea id="input"></textarea>
+	Фонема
+	<textarea id="output"></textarea>
+</body>
+
+<script type="text/javascript">
+	document.getElementById("input").addEventListener("input", onInput);
+
+	function onInput() {
+		let text = document.getElementById("input").value;
+		document.getElementById("output").value = textToPhonems(text);
+	}
+
+	// TODO process harder rules 
+	const phonems = {
+		"дж": "D JH",
+		"дз": "D Z",
+
+		"а": "AH0",
+		"б": "B",
+		"в": "W",
+		"г": "G",
+		"ґ": "G",
+		"д": "D",
+		"е": "AE0",
+		"є": "Y AE0",
+		"э": "Y AE0",
+		"ё": "Y AO0",
+		"ж": "JH",
+		"з": "Z",
+		"и": "Y",
+		"ы": "Y",
+		"і": "IY0",
+		"ї": "Y IY0",
+		"й": "Y",
+		"к": "K",
+		"л": "L",
+		"м": "M",
+		"н": "N",
+		"о": "AO0",
+		"п": "P",
+		"р": "R",
+		"с": "S",
+		"т": "T",
+		"у": "UH0",
+		"ф": "F",
+		"х": "HH",
+		"ц": "T S",
+		"ч": "CH",
+		"ш": "SH",
+		"щ": "SH CH",
+		"ь": "Y", //?
+		"ю": "Y UH0",
+		"я": "Y AH0",
+
+		"'": "",
+		
+		",": ",",
+		".": ".",
+		"!": "!",
+		"?": "?",
+		" ": " ",
+		"-": "-",
+		"—": "—",
+		"": "",
+	}
+
+	function textToPhonems(text) {
+		let words = text.replace("\n", " ").replaceAll(/[.,!?]+/g, " ").split(" "); //currently removing all punctuation
+		let out = [];
+		for(let word of words) {
+			let phonetic = wordToPhonems(word.toLowerCase())
+			if(phonetic) out.push(`{${phonetic}}`)
+		}
+		return out.join(" ");
+	}
+
+	function wordToPhonems(word) {
+		let chars = Array.from(word);
+		let out = [];
+		for(let char of chars) {
+			let phonem = phonems[char];
+			if(!phonem) {
+				console.log("NO PHONEM FOUND: "+char);
+				continue;
+			}
+			out.push(phonem);
+		}
+		return out.join(" ");
+	}
+</script>
+</html>
