@@ -67,7 +67,8 @@
 		"ч": "CH",
 		"ш": "SH",
 		"щ": "SH CH",
-		"ь": "Y", //?
+		"ь": "Y",
+		"ъ": "",
 		"ю": "Y UH0",
 		"я": "Y AH0",
 
@@ -80,17 +81,26 @@
 		" ": " ",
 		"-": "-",
 		"—": "—",
+
 		"": "",
+		"{": "",
+		"}": ""
 	}
 
 	function textToPhonems(text) {
-		let words = text.replace("\n", " ").replaceAll(/[.,!?]+/g, " ").split(" "); //currently removing all punctuation
+		const punctuation = ` .,?!""[]`;
+		let words = inclusiveSplit(text.split("\n").join(" "), punctuation);
 		let out = [];
 		for(let word of words) {
+			if(punctuation.includes(word)) {
+				out.push(word);
+				continue;
+			}
+
 			let phonetic = wordToPhonems(word.toLowerCase())
 			if(phonetic) out.push(`{${phonetic}}`)
 		}
-		return out.join(" ");
+		return out.join("");
 	}
 
 	function wordToPhonems(word) {
@@ -98,13 +108,32 @@
 		let out = [];
 		for(let char of chars) {
 			let phonem = phonems[char];
-			if(!phonem) {
+			if(phonem === undefined) {
 				console.log("NO PHONEM FOUND: "+char);
 				continue;
 			}
 			out.push(phonem);
 		}
 		return out.join(" ");
+	}
+
+	function inclusiveSplit(text, separators) {
+		let characters = Array.from(text);
+		let out = [];
+		let current = "";
+		for(let char of characters) {
+			if(separators.includes(char)) {
+				if(current) {
+					out.push(current);
+					current = "";
+				}
+				out.push(char);
+			} else {
+				current += char;
+			}
+		}
+		out.push(current);
+		return out;
 	}
 </script>
 </html>
