@@ -1,139 +1,177 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-	<title>Фонеми</title>
-	<style type="text/css">
-		body {
-			display: flex;
-			flex-direction: column;
-		}
+    <title>Фонеми</title>
+    <style type="text/css">
+    body {
+        display: flex;
+        flex-direction: column;
+    }
 
-		textarea {
-			min-height: 150px;
-			margin: 20px;
-		}
-	</style>
+    textarea {
+        min-height: 150px;
+        margin: 20px;
+    }
+    </style>
 </head>
+
 <body>
-	Текст українською
-	<textarea id="input"></textarea>
-	Фонема
-	<textarea id="output"></textarea>
+    Текст українською
+    <textarea id="input"></textarea>
+    Фонема
+    <textarea id="output"></textarea>
+    <button onclick="copyResult()">Копіювати</button>
 </body>
-
 <script type="text/javascript">
-	document.getElementById("input").addEventListener("input", onInput);
+document.getElementById("input").addEventListener("input", onInput);
 
-	function onInput() {
-		let text = document.getElementById("input").value;
-		document.getElementById("output").value = textToPhonems(text);
-	}
+function onInput() {
+    let text = document.getElementById("input").value;
+    document.getElementById("output").value = textToPhonems(text);
+}
 
-	// TODO process harder rules 
-	const phonems = {
-		"дж": "D JH",
-		"дз": "D Z",
+function copyResult() {
+	copyTextToClipboard(document.getElementById("output").value);
+}
 
-		"а": "AH0",
-		"б": "B",
-		"в": "W",
-		"г": "G",
-		"ґ": "G",
-		"д": "D",
-		"е": "AE0",
-		"є": "Y AE0",
-		"э": "Y AE0",
-		"ё": "Y AO0",
-		"ж": "JH",
-		"з": "Z",
-		"и": "Y",
-		"ы": "Y",
-		"і": "IY0",
-		"ї": "Y IY0",
-		"й": "Y",
-		"к": "K",
-		"л": "L",
-		"м": "M",
-		"н": "N",
-		"о": "AO0",
-		"п": "P",
-		"р": "R",
-		"с": "S",
-		"т": "T",
-		"у": "UH0",
-		"ф": "F",
-		"х": "HH",
-		"ц": "T S",
-		"ч": "CH",
-		"ш": "SH",
-		"щ": "SH CH",
-		"ь": "Y",
-		"ъ": "",
-		"ю": "Y UH0",
-		"я": "Y AH0",
+// TODO process harder rules 
+const phonems = {
+    "дж": "D JH",
+    "дз": "D Z",
 
-		"'": "",
-		
-		",": ",",
-		".": ".",
-		"!": "!",
-		"?": "?",
-		" ": " ",
-		"-": "-",
-		"—": "—",
+    "а": "AH0",
+    "б": "B",
+    "в": "W",
+    "г": "G",
+    "ґ": "G",
+    "д": "D",
+    "е": "AE0",
+    "є": "Y AE0",
+    "э": "Y AE0",
+    "ё": "Y AO0",
+    "ж": "JH",
+    "з": "Z",
+    "и": "Y",
+    "ы": "Y",
+    "і": "IY0",
+    "ї": "Y IY0",
+    "й": "Y",
+    "к": "K",
+    "л": "L",
+    "м": "M",
+    "н": "N",
+    "о": "AO0",
+    "п": "P",
+    "р": "R",
+    "с": "S",
+    "т": "T",
+    "у": "UH0",
+    "ф": "F",
+    "х": "HH",
+    "ц": "T S",
+    "ч": "CH",
+    "ш": "SH",
+    "щ": "SH CH",
+    "ь": "Y",
+    "ъ": "",
+    "ю": "Y UH0",
+    "я": "Y AH0",
 
-		"": "",
-		"{": "",
-		"}": ""
-	}
+    "'": "",
 
-	function textToPhonems(text) {
-		const punctuation = ` .,?!""[]`;
-		let words = inclusiveSplit(text.split("\n").join(" "), punctuation);
-		let out = [];
-		for(let word of words) {
-			if(punctuation.includes(word)) {
-				out.push(word);
-				continue;
-			}
+    ",": ",",
+    ".": ".",
+    "!": "!",
+    "?": "?",
+    " ": " ",
+    "-": "-",
+    "—": "—",
 
-			let phonetic = wordToPhonems(word.toLowerCase())
-			if(phonetic) out.push(`{${phonetic}}`)
-		}
-		return out.join("");
-	}
+    "": "",
+    "{": "",
+    "}": ""
+}
 
-	function wordToPhonems(word) {
-		let chars = Array.from(word);
-		let out = [];
-		for(let char of chars) {
-			let phonem = phonems[char];
-			if(phonem === undefined) {
-				console.log("NO PHONEM FOUND: "+char);
-				continue;
-			}
-			out.push(phonem);
-		}
-		return out.join(" ");
-	}
+function textToPhonems(text) {
+    const punctuation = ` .,?!""[]`;
+    let words = inclusiveSplit(text.split("\n").join(" "), punctuation);
+    let out = [];
+    for (let word of words) {
+        if (punctuation.includes(word)) {
+            out.push(word);
+            continue;
+        }
 
-	function inclusiveSplit(text, separators) {
-		let characters = Array.from(text);
-		let out = [];
-		let current = "";
-		for(let char of characters) {
-			if(separators.includes(char)) {
-				if(current) {
-					out.push(current);
-					current = "";
-				}
-				out.push(char);
-			} else {
-				current += char;
-			}
-		}
-		out.push(current);
-		return out;
-	}
+        let phonetic = wordToPhonems(word.toLowerCase())
+        if (phonetic) out.push(`{${phonetic}}`)
+    }
+    return out.join("");
+}
+
+function wordToPhonems(word) {
+    let chars = Array.from(word);
+    let out = [];
+    for (let char of chars) {
+        let phonem = phonems[char];
+        if (phonem === undefined) {
+            console.log("NO PHONEM FOUND: " + char);
+            continue;
+        }
+        out.push(phonem);
+    }
+    return out.join(" ");
+}
+
+function inclusiveSplit(text, separators) {
+    let characters = Array.from(text);
+    let out = [];
+    let current = "";
+    for (let char of characters) {
+        if (separators.includes(char)) {
+            if (current) {
+                out.push(current);
+                current = "";
+            }
+            out.push(char);
+        } else {
+            current += char;
+        }
+    }
+    out.push(current);
+    return out;
+}
+
+function fallbackCopyTextToClipboard(text) {
+    var textArea = document.createElement("textarea");
+    textArea.value = text;
+
+    // Avoid scrolling to bottom
+    textArea.style.top = "0";
+    textArea.style.left = "0";
+    textArea.style.position = "fixed";
+
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+
+    try {
+        var successful = document.execCommand('copy');
+    } catch (err) {
+        console.error('Failed to copy text to clipboard!', err);
+    }
+
+    document.body.removeChild(textArea);
+}
+
+function copyTextToClipboard(text) {
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(text);
+    } else {
+        fallbackCopyTextToClipboard(text);
+    }
+
+}
 </script>
+
 </html>
