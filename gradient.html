@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>2D Gradient</title>
+    <style type="text/css">
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /*#canvas {
+            width: 100%;
+            height: 100%;
+        }*/
+    </style>
+</head>
+<body>
+    <input type="range" min="32" max="1024" value="128" step="32" id="slider"/>
+    <div>
+        <canvas id="canvas"></canvas>
+    </div>
+    <script type="text/javascript">
+        class Point {
+            // position: x, y
+            // color: r, g, b
+            constructor(position, color) {
+                this.position = position;
+                this.color = color;
+            }
+        }
+
+        let size = 128;
+        let canvas = document.getElementById("canvas");
+        let ctx = canvas.getContext("2d");
+        let points = [];
+
+        canvas.width = size;
+        canvas.height = size;
+
+        document.getElementById("slider").addEventListener("change", ev => {
+            size = ev.target.value;
+            canvas.width = size;
+            canvas.height = size;
+        })
+
+        window.requestAnimationFrame(animationFrame);
+
+        let baseAngle = 0;
+        function animationFrame() {
+            let radius = size/3;
+            let center = size/2;
+            let x1 = center + radius*Math.cos(baseAngle);
+            let y1 = center + radius*Math.sin(baseAngle);
+
+            let x2 = center + radius*Math.cos(baseAngle+2*Math.PI/3);
+            let y2 = center + radius*Math.sin(baseAngle+2*Math.PI/3);
+
+            let x3 = center + radius*Math.cos(baseAngle+2*Math.PI/3*2);
+            let y3 = center + radius*Math.sin(baseAngle+2*Math.PI/3*2);
+
+            points = [];
+            points.push(new Point({x: x1, y: y1}, {r:0,g:0,b:255}));
+            points.push(new Point({x: x2, y: y2}, {r:255,g:0,b:0}));
+            points.push(new Point({x: x3, y: y3}, {r:0,g:255,b:0}));
+
+            render();
+            baseAngle += Math.PI/60;
+
+            window.requestAnimationFrame(animationFrame);
+        }
+
+         function render() {
+            for(let x = 0; x < size; x++) {
+                for(let y = 0; y < size; y++) {
+                    let color = getColorFor({x, y}, points);
+                    ctx.fillStyle = `rgb(${color.r},${color.g},${color.b})`;
+                    ctx.fillRect(x, y, 1, 1);
+                }
+            }
+        }
+
+        function getColorFor(position, points) {
+        	// looks better with lambda, but works slower(
+            let distances = []
+            let minDist = Number.MAX_VALUE;
+            for(let point of points) {
+                let dist = distance(position, point.position);
+                distances.push(dist);
+                if(dist < minDist) minDist = dist;
+            }
+
+            let normalized = [];
+            let sum = 0;
+            for(let dist of distances) {
+            	// idk what method of normalization is better
+            	//let norm = Math.pow(size-(dist-minDist), 5);
+            	let norm = Math.pow(minDist/dist, 2); // maybe edit exponent?
+            	normalized.push(norm);
+            	sum += norm;
+            }
+
+            let color = randomSubtleColor(); // slight random color somehow makes it more appealing
+            // average color with weight
+            for(let i = 0; i < points.length; i++) {
+                let pColor = points[i].color;
+                let weight = normalized[i] / sum;
+                color.r += pColor.r * weight;
+                color.g += pColor.g * weight;
+                color.b += pColor.b * weight;
+            }
+
+            return color;
+        }
+
+        function distance(pos1, pos2) {
+            return Math.sqrt((pos1.x-pos2.x)*(pos1.x-pos2.x)+(pos1.y-pos2.y)*(pos1.y-pos2.y));
+        }
+
+        function randomSubtleColor() {
+            return {
+                r: Math.random()*3,
+                g: Math.random()*3,
+                b: Math.random()*3,
+            }
+        }
+    </script>
+</body>
+</html>
