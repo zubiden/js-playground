@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Theme change</title>
+    <style type="text/css">
+        html, body {
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+
+        .content {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 60px 10%;
+            min-height: 100%;
+            background-color: white;
+        }
+
+        .content.dummy {
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+        }
+
+        .content:not(.dummy) {
+            mask-image: radial-gradient(transparent 0%, white 0%);
+            -webkit-mask-image: radial-gradient(transparent 0%, white 0%);
+        }
+
+        .content.dark {
+            background-color: black;
+        }
+
+        .message {
+            padding: 1em;
+            border-radius: 1em;
+            border: 1px solid blue;
+            background-color: lightblue;
+        }
+
+        .message img {
+            display: block;
+            object-fit: contain;
+            max-width: 250px;
+            margin: 10px auto;
+        }
+
+        .content.dark .message {
+            border: 1px solid white;
+            background-color: #200020;
+            color: white;
+        }
+
+        .change {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 0.5em;
+            border-radius: 0.5em;
+            background-color: lightblue;
+            outline: none;
+            border: none;
+            cursor: pointer;
+            transition: all 0.1s ease-in-out;
+        }
+
+        .content.dark .change {
+            background-color: darkblue;
+            color: white;
+        }
+
+        .change:hover {
+            background-color: darkblue;
+            color: white;
+        }
+
+        .content.dark .change:hover {
+            background-color: lightblue;
+            color: black;
+        }
+
+    </style>
+</head>
+<body>
+    <div id="theme" class="content dark">
+        <button class="change" onclick="toggletheme()">Change theme</button>
+        <div class="message">
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut sem odio, egestas eget nisi vel, condimentum pulvinar mauris. Nam eget justo magna. 
+        </div>
+        <div class="message">
+            Morbi quis tellus nisi. Nulla arcu enim, auctor at venenatis ut, venenatis nec tortor. Quisque a nisl aliquet mi pulvinar placerat. Aliquam eget lacinia justo. Etiam condimentum nisi non ullamcorper ornare. Aliquam a nibh nulla.
+        </div>
+        <div class="message">
+            Duis tempor venenatis elit. Nullam ornare ipsum vitae accumsan tincidunt.
+            <img src="https://avatanplus.com/files/resources/original/5a5e5b230aefb161009400e5.png"/>
+        </div>
+        <div class="message">
+            Etiam pretium urna vitae purus scelerisque imperdiet. Sed tempus condimentum lacus. Cras volutpat, quam a mollis tempor, enim est sodales lacus, at ultrices elit dui quis ipsum.
+        </div>
+    </div>
+    <script type="text/javascript">
+
+        function init() {
+            const themeable = document.getElementById("theme");
+            let clone = themeable.cloneNode(true);
+            clone.id = "dummy";
+            clone.classList.add("dummy");
+            clone.classList.toggle("dark", !themeable.classList.contains("dark"))
+            themeable.parentNode.prepend(clone);
+
+            themeable.id = "active";
+        }
+
+        init();
+
+        let animating = false;
+        let animationStart = null;
+        let animationTime = 500;
+
+        function toggletheme() {
+            if(animating) return;
+            animating = true;
+
+            const dummy = document.getElementById("dummy");
+            const active = document.getElementById("active");
+
+            animationStart = Date.now();
+            window.requestAnimationFrame(animate);
+
+            setTimeout(() => {
+                animating = false;
+
+                active.style.removeProperty("-webkit-mask-image");
+                active.style.removeProperty("mask-image");
+                let activeDark = active.classList.contains("dark");
+
+                dummy.classList.toggle("dark", activeDark);
+                active.classList.toggle("dark", !activeDark);
+            }, animationTime);
+        }
+
+        function animate() {
+            let percent = (Date.now() - animationStart) / animationTime;
+            if(percent > 1) return;
+            const active = document.getElementById("active");
+            const goingTo = 150;
+
+            const {x, y} = getCenterPosition(active.querySelector(".change"));
+
+            let gradientString = `radial-gradient(circle farthest-side at ${x}px ${y}px, transparent ${percent*goingTo}%, white ${percent*goingTo + 1}%)`;
+            active.style.webkitMaskImage = gradientString;
+            active.style.maskImage = gradientString;
+
+            window.requestAnimationFrame(animate);
+        }
+
+        function getCenterPosition(el) {
+            let x = el.offsetLeft+el.clientWidth/2;
+            let y = el.offsetTop+el.clientHeight/2;
+            return {x, y};
+        }
+    </script>
+</body>
+</html>
