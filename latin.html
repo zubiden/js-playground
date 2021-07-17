@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Латинка</title>
+    <style type="text/css">
+    body {
+        display: flex;
+        flex-direction: column;
+    }
+
+    textarea {
+        min-height: 150px;
+        margin: 20px;
+    }
+    </style>
+</head>
+
+<body>
+    Текст кирилицею
+    <textarea id="input"></textarea>
+    Їречківка
+    <textarea id="output"></textarea>
+    <button onclick="copyResult()">Копіювати</button>
+</body>
+<script type="text/javascript">
+document.getElementById("input").addEventListener("input", onInput);
+
+function onInput() {
+    let text = document.getElementById("input").value;
+    document.getElementById("output").value = textToSyllables(text);
+}
+
+function copyResult() {
+	copyTextToClipboard(document.getElementById("output").value);
+}
+
+// TODO process harder rules 
+const syllables = {
+    "дзь": "dź",
+    "дз": "dz",
+    "шч": "šč",
+
+    "дь": "ð",
+    "зь": "ź",
+    "ль": "ľ",
+    "нь": "ń",
+    "рь": "ŕ",
+    "сь": "ś",
+    "ть": "ť",
+    "ць": "ć",
+
+    "кс": "x",
+
+    "а": "a",
+    "б": "b",
+    "в": "v",
+    "г": "h",
+    "ґ": "g",
+    "д": "d",
+    "е": "e",
+    "є": "je",
+    "ж": "ž",
+    "з": "z",
+    "и": "y",
+    "і": "i",
+    "ї": "ji",
+    "й": "j",
+    "к": "k",
+    "л": "l",
+    "м": "m",
+    "н": "n",
+    "о": "o",
+    "п": "p",
+    "р": "r",
+    "с": "s",
+    "т": "t",
+    "у": "u",
+    "ф": "f",
+    "х": "h", // ?
+    "ц": "c",
+    "ч": "č",
+    "ш": "š",
+    "щ": "šč",
+    "ю": "ju",
+    "я": "ja",
+}
+
+function textToSyllables(text) {
+    if (!text) return "";
+    Object.entries(syllables).forEach(([key, value]) => {
+        text = replaceSyllable(text, key, value);
+    });
+    return text;
+}
+
+function replaceSyllable(text, syllable, replacement) {
+    syllable = syllable.toLowerCase();
+    replacement = replacement.toLowerCase();
+
+    const caps = syllable.toUpperCase();
+    const capsR = replacement.toUpperCase();
+
+    const capitalized = syllable.length === 1 ? caps : syllable[0].toUpperCase() + syllable.substring(1);
+    const capitalizedR = syllable.length === 1 ? capsR : replacement[0].toUpperCase() + replacement.substring(1);
+
+    return text.replaceAll(capitalized, capitalizedR).replaceAll(caps, capsR).replaceAll(syllable, replacement);
+}
+
+function isUpperCase(str) {
+    return str == str.toUpperCase() && str != str.toLowerCase();
+}
+
+function fallbackCopyTextToClipboard(text) {
+    var textArea = document.createElement("textarea");
+    textArea.value = text;
+
+    // Avoid scrolling to bottom
+    textArea.style.top = "0";
+    textArea.style.left = "0";
+    textArea.style.position = "fixed";
+
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+
+    try {
+        var successful = document.execCommand('copy');
+    } catch (err) {
+        console.error('Failed to copy text to clipboard!', err);
+    }
+
+    document.body.removeChild(textArea);
+}
+
+function copyTextToClipboard(text) {
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(text);
+    } else {
+        fallbackCopyTextToClipboard(text);
+    }
+
+}
+</script>
+
+</html>
