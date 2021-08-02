@@ -141,7 +141,7 @@ function replaceSyllable(text, syllable, replacement) {
     const capitalized = syllable.length === 1 ? caps : syllable[0].toUpperCase() + syllable.substring(1);
     const capitalizedR = syllable.length === 1 && replacement.length === 1 ? capsR : replacement[0].toUpperCase() + replacement.substring(1);
 
-    return text.replaceAll(capitalized, capitalizedR).replaceAll(caps, capsR).replaceAll(syllable, replacement);
+    return text.replaceAll(syllable, replacement).replaceAll(capitalized, capitalizedR).replaceAll(caps, capsR);
 }
 
 function isUpperCase(str) {
