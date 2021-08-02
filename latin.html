@@ -41,10 +41,6 @@ const syllables = {
     "дз": "dz",
     "шч": "šč",
 	
-    "Я": "Ja",	
-    "'я": "ja"
-	
-	
     "дь": "ð",
     "зь": "ź",
     "ль": "ľ",
@@ -64,6 +60,7 @@ const syllables = {
     "тя": "ťa",
     "ця": "ća",
 
+    "'я": "ja",
     "кс": "x",
 
     "а": "a",
@@ -97,7 +94,7 @@ const syllables = {
     "ш": "š",
     "щ": "šč",
     "ю": "ju",
-    "я": "a",
+    "я": "ja",
 }
 
 function textToSyllables(text) {
@@ -112,11 +109,16 @@ function replaceSyllable(text, syllable, replacement) {
     syllable = syllable.toLowerCase();
     replacement = replacement.toLowerCase();
 
+    // АНАНАС - ANANAS
+    // ананас - аnanas
+    // BUG: ЯЛОВИЧИНА - JaLOVYČYNA
+    // Чи варто враховувати вгадувати регістр?
+
     const caps = syllable.toUpperCase();
     const capsR = replacement.toUpperCase();
 
     const capitalized = syllable.length === 1 ? caps : syllable[0].toUpperCase() + syllable.substring(1);
-    const capitalizedR = syllable.length === 1 ? capsR : replacement[0].toUpperCase() + replacement.substring(1);
+    const capitalizedR = syllable.length === 1 && replacement.length === 1 ? capsR : replacement[0].toUpperCase() + replacement.substring(1);
 
     return text.replaceAll(capitalized, capitalizedR).replaceAll(caps, capsR).replaceAll(syllable, replacement);
 }
