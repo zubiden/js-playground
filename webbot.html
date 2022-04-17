@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Bot Test</title>
+    <style type="text/css">
+        body {
+            background-color: var(--tg-theme-bg-color);
+            color: var(--tg-theme-text-color);
+            transition: all 0.25s ease-in-out;
+        }
+
+        .hint {
+            color: var(--tg-theme-hint-color, "#cccccc");
+        }
+
+        a {
+            color: var(--tg-theme-link-color);
+        }
+
+        button {
+            background-color: var(--tg-theme-button-color);
+            color: var(--tg-theme-button-text-color)''
+        }
+    </style>
+</head>
+<body>
+    <h2>Page title</h2>
+    <p class="hint">Hint text</p>
+    <button id="button">Button</button>
+    <p>Lorem, ipsum dolor sit amet consectetur adipisicing elit. Reiciendis suscipit voluptatem vitae quod recusandae optio iusto. Atque maxime maiores voluptates minima architecto, quibusdam sapiente vero omnis, temporibus sit asperiores esse!</p>
+    <ul>
+        <li>Item 1</li>
+        <li>Item 2</li>
+        <li>Item 3</li>
+        <li>Item 4</li>
+        <li>Item 5</li>
+    </ul>
+    <a href="https://google.com">Google</a>
+    <p>Bla bla bla</p>
+    <embed src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1" width="300" height="400"/>
+    <p>Some filler</p>
+
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+        const button = document.getElementById('button');
+        button.addEventListener('click', () => {
+            Telegram.WebApp.sendData("Button was clicked at " + new Date());
+        });
+    </script>
+</body>
+</html>
