@@ -29,7 +29,7 @@
 <body>
     <h2>Page title</h2>
     <p class="hint">Hint text</p>
-    <button id="button">Button</button>
+    <button id="button">Button (Should not work)</button>
     <p>Lorem, ipsum dolor sit amet consectetur adipisicing elit. Reiciendis suscipit voluptatem vitae quod recusandae optio iusto. Atque maxime maiores voluptates minima architecto, quibusdam sapiente vero omnis, temporibus sit asperiores esse!</p>
     <ul>
         <li>Item 1</li>
@@ -42,11 +42,12 @@
     <p>Bla bla bla</p>
     <embed src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1" width="300" height="400"/>
     <p>Some filler</p>
-    <button id="button2">Button2</button>
+    <button id="button2">Test alert box (does not work)</button>
+    <br/>
 
-    <button id="tglBtn">Toggle button</button>
-    <button id="tglProg">Toggle progress</button>
-    <button id="tglActive">Toggle active</button>
+    <button id="tglBtn">Toggle button: </button>
+    <button id="tglProg">Toggle progress: </button>
+    <button id="tglActive">Toggle active: </button>
 
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
@@ -67,18 +68,24 @@
         tglBtn.addEventListener('click', () => {
             visible = !visible;
             visible ? Telegram.WebApp.MainButton.hide() : Telegram.WebApp.MainButton.setText("Button").show();
+            const text = tglBtn.innerText.split(":")[0];
+            tglBtn.innerText = `${text}: ${visible ? "Visible" : "Hidden"}`;
         });
 
         const tglProg = document.getElementById('tglProg');
         tglProg.addEventListener('click', () => {
             progress = !progress;
             progress ? Telegram.WebApp.MainButton.hideProgress() : Telegram.WebApp.MainButton.showProgress();
+            const text = tglProg.innerText.split(":")[0];
+            tglProg.innerText = `${text}: ${progress ? "Visible" : "Hidden"}`;
         });
 
         const tglActive = document.getElementById('tglActive');
         tglActive.addEventListener('click', () => {
             active = !active;
             active ? Telegram.WebApp.MainButton.disable() : Telegram.WebApp.MainButton.enable();
+            const text = tglActive.innerText.split(":")[0];
+            tglActive.innerText = `${text}: ${active ? "Disabled" : "Enabled"}`;
         });
     </script>
 </body>
