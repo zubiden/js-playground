@@ -1,11 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Web Bot Test</title>
     <style type="text/css">
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(90,90,90,0.3) transparent;
+        }
+
+        *::-webkit-scrollbar {
+            width: 6px;
+            background-color: transparent;
+        }
+
+        *::-webkit-scrollbar-thumb {
+            border-radius: 6px;
+            background-color: rgba(90, 90, 90, 0.3);
+        }
+
         body {
             background-color: var(--tg-theme-bg-color);
             color: var(--tg-theme-text-color);
@@ -30,11 +46,14 @@
         }
     </style>
 </head>
+
 <body>
     <h2>Page title</h2>
     <p class="hint">Hint text</p>
     <button id="button">Button (Should not work)</button>
-    <p>Lorem, ipsum dolor sit amet consectetur adipisicing elit. Reiciendis suscipit voluptatem vitae quod recusandae optio iusto. Atque maxime maiores voluptates minima architecto, quibusdam sapiente vero omnis, temporibus sit asperiores esse!</p>
+    <p>Lorem, ipsum dolor sit amet consectetur adipisicing elit. Reiciendis suscipit voluptatem vitae quod recusandae
+        optio iusto. Atque maxime maiores voluptates minima architecto, quibusdam sapiente vero omnis, temporibus sit
+        asperiores esse!</p>
     <ul>
         <li>Item 1</li>
         <li>Item 2</li>
@@ -43,19 +62,19 @@
         <li>Item 5</li>
     </ul>
     <a href="https://google.com">Google</a>
-    <br/>
-    <br/>
-    <br/>
-    <embed src="https://www.youtube.com/embed/dQw4w9WgXcQ" width="600" height="400"/>
+    <br />
+    <br />
+    <br />
+    <embed src="https://www.youtube.com/embed/dQw4w9WgXcQ" width="600" height="400" />
     <p>Some filler</p>
     <button id="button2">Test alert box (does not work)</button>
-    <br/>
+    <br />
 
     <button id="tglBtn">Toggle button: </button>
     <button id="tglProg">Toggle progress: </button>
     <button id="tglActive">Toggle active: </button>
 
-    <br/>
+    <br />
     <textarea id="output" disabled cols="40" rows="20"></textarea>
 
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -103,4 +122,5 @@
         });
     </script>
 </body>
+
 </html>
