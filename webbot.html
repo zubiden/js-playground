@@ -55,6 +55,9 @@
     <button id="tglProg">Toggle progress: </button>
     <button id="tglActive">Toggle active: </button>
 
+    <br/>
+    <textarea id="output" disabled cols="40" rows="20"></textarea>
+
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
         let visible = false;
@@ -92,6 +95,11 @@
             active = !active;
             const text = tglActive.innerText.split(":")[0];
             tglActive.innerText = `${text}: ${active ? "Enabled" : "Disabled"}`;
+        });
+
+        const output = document.getElementById('output');
+        Telegram.WebApp.MainButton.onClick(() => {
+            output.value += "Button was clicked at " + Date.now() + "\n";
         });
     </script>
 </body>
