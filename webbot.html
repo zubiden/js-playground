@@ -44,8 +44,15 @@
     <p>Some filler</p>
     <button id="button2">Button2</button>
 
+    <button id="tglBtn">Toggle button</button>
+    <button id="tglProg">Toggle progress</button>
+    <button id="tglActive">Toggle active</button>
+
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
+        let visible = false;
+        let progress = false;
+        let active = false;
         const button = document.getElementById('button');
         button.addEventListener('click', () => {
             Telegram.WebApp.sendData("Button was clicked at " + new Date());
@@ -54,6 +61,24 @@
         const button2 = document.getElementById('button2');
         button2.addEventListener('click', () => {
             alert('Hello');
+        });
+
+        const tglBtn = document.getElementById('tglBtn');
+        tglBtn.addEventListener('click', () => {
+            visible = !visible;
+            visible ? Telegram.WebApp.MainButton.hide() : Telegram.WebApp.MainButton.setText("Button").show();
+        });
+
+        const tglProg = document.getElementById('tglProg');
+        tglProg.addEventListener('click', () => {
+            progress = !progress;
+            progress ? Telegram.WebApp.MainButton.hideProgress() : Telegram.WebApp.MainButton.showProgress();
+        });
+
+        const tglActive = document.getElementById('tglActive');
+        tglActive.addEventListener('click', () => {
+            active = !active;
+            active ? Telegram.WebApp.MainButton.disable() : Telegram.WebApp.MainButton.enable();
         });
     </script>
 </body>
