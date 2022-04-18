@@ -42,12 +42,18 @@
     <p>Bla bla bla</p>
     <embed src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1" width="300" height="400"/>
     <p>Some filler</p>
+    <button id="button2">Button2</button>
 
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
         const button = document.getElementById('button');
         button.addEventListener('click', () => {
             Telegram.WebApp.sendData("Button was clicked at " + new Date());
+        });
+
+        const button2 = document.getElementById('button2');
+        button2.addEventListener('click', () => {
+            alert('Hello');
         });
     </script>
 </body>
