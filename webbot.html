@@ -21,8 +21,12 @@
         }
 
         button {
-            background-color: var(--tg-theme-button-color);
-            color: var(--tg-theme-button-text-color)''
+            background-color: var(--tg-theme-button-color, "#cccccc");
+            color: var(--tg-theme-button-text-color);
+            border: none;
+            padding: 0.5rem;
+            margin: 0.5rem;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -39,8 +43,10 @@
         <li>Item 5</li>
     </ul>
     <a href="https://google.com">Google</a>
-    <p>Bla bla bla</p>
-    <embed src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1" width="300" height="400"/>
+    <br/>
+    <br/>
+    <br/>
+    <embed src="https://www.youtube.com/embed/dQw4w9WgXcQ" width="600" height="400"/>
     <p>Some filler</p>
     <button id="button2">Test alert box (does not work)</button>
     <br/>
@@ -66,26 +72,26 @@
 
         const tglBtn = document.getElementById('tglBtn');
         tglBtn.addEventListener('click', () => {
-            visible = !visible;
             visible ? Telegram.WebApp.MainButton.hide() : Telegram.WebApp.MainButton.setText("Button").show();
+            visible = !visible;
             const text = tglBtn.innerText.split(":")[0];
             tglBtn.innerText = `${text}: ${visible ? "Visible" : "Hidden"}`;
         });
 
         const tglProg = document.getElementById('tglProg');
         tglProg.addEventListener('click', () => {
-            progress = !progress;
             progress ? Telegram.WebApp.MainButton.hideProgress() : Telegram.WebApp.MainButton.showProgress();
+            progress = !progress;
             const text = tglProg.innerText.split(":")[0];
             tglProg.innerText = `${text}: ${progress ? "Visible" : "Hidden"}`;
         });
 
         const tglActive = document.getElementById('tglActive');
         tglActive.addEventListener('click', () => {
-            active = !active;
             active ? Telegram.WebApp.MainButton.disable() : Telegram.WebApp.MainButton.enable();
+            active = !active;
             const text = tglActive.innerText.split(":")[0];
-            tglActive.innerText = `${text}: ${active ? "Disabled" : "Enabled"}`;
+            tglActive.innerText = `${text}: ${active ? "Enabled" : "Disabled"}`;
         });
     </script>
 </body>
