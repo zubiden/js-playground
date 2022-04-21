@@ -7,26 +7,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Web Bot Test</title>
     <style type="text/css">
-        * {
-            scrollbar-width: thin;
-            scrollbar-color: rgba(90,90,90,0.3) transparent;
-        }
-
-        *::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-            background-color: transparent;
-        }
-
-        *::-webkit-scrollbar-thumb {
-            border-radius: 6px;
-            background-color: rgba(90, 90, 90, 0.3);
-        }
-        
-        *::-webkit-scrollbar-corner {
-            background-color: transparent;
-        }
-
         body {
             background-color: var(--tg-theme-bg-color);
             color: var(--tg-theme-text-color);
@@ -67,11 +47,11 @@
         <li>Item 5</li>
     </ul>
     <a href="https://google.com">Google</a>
-    <br/>
+    <br />
     <a href="https://t.me/durov">Durov</a>
-    <br/>
+    <br />
     <a href="tg://resolve?domain=durov">Durov, but TG://</a>
-    <br/>
+    <br />
     <a href="https://t.me/someunexistentchat1fd21">Test broken link</a>
     <br />
     <br />
@@ -90,19 +70,22 @@
 
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
+        const isIframe = window !== window.parent;
         // Catch link clicks
         const RE_TG_LINK = /^tg:(\/\/)?([?=&\d\w_-]+)?/gm;
         const RE_TME_LINK = /^(?:https?:\/\/)?(?:t\.me\/)/gm; // IDK about other domains
-        window.addEventListener('click', (e) => {
-            const url = e.target.href;
-            if (url && (url.match(RE_TG_LINK) || url.match(RE_TME_LINK))) {
-                e.preventDefault();
-                window.parent.postMessage(JSON.stringify({
-                    eventType: 'open_tg_link',
-                    eventData: url
-                }), '*');
-            }
-        });
+        if (isIframe) {
+            window.addEventListener('click', (e) => {
+                const url = e.target.href;
+                if (url && (url.match(RE_TG_LINK) || url.match(RE_TME_LINK))) {
+                    e.preventDefault();
+                    window.parent.postMessage(JSON.stringify({
+                        eventType: 'open_tg_link',
+                        eventData: url
+                    }), '*');
+                }
+            });
+        }
 
         let visible = false;
         let progress = false;
