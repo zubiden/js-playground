@@ -67,6 +67,8 @@
         <li>Item 5</li>
     </ul>
     <a href="https://google.com">Google</a>
+    <a href="https://t.me/durov">Durov</a>
+    <a href="tg://resolve?domain=durov">Durov, but TG://</a>
     <br />
     <br />
     <br />
@@ -84,6 +86,21 @@
 
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
+        // Catch link clicks
+        const RE_TG_LINK = /^tg:(\/\/)?([?=&\d\w_-]+)?/gm;
+        const RE_TME_LINK = /^(?:https?:\/\/)?(?:t\.me\/)/gm; // IDK about other domains
+        window.addEventListener('click', (e) => {
+            const url = e.target.href;
+            if (url && (url.match(RE_TG_LINK) || url.match(RE_TME_LINK))) {
+                e.preventDefault();
+                window.parent.postMessage(JSON.stringify({
+                    eventType: 'open_tg_link',
+                    eventData: url
+                }), '*');
+                return false;
+            }
+        });
+
         let visible = false;
         let progress = false;
         let active = false;
