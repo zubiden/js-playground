@@ -82,12 +82,20 @@
                 const url = e.target.href;
                 if (url && (url.match(RE_TG_LINK) || url.match(RE_TME_LINK))) {
                     e.preventDefault();
-                    window.parent.postMessage(JSON.stringify({
-                        eventType: 'open_tg_link',
-                        eventData: url
-                    }), '*');
+                    openTgLink(url);
                 }
             });
+        }
+
+        function openTgLink(url) {
+            if (isIframe) {
+                window.parent.postMessage(JSON.stringify({
+                    eventType: 'open_tg_link',
+                    eventData: url
+                }), '*');
+            } else {
+                window.location.href = url;
+            }
         }
 
         document.getElementById('browser').textContent = `Your browser: ${navigator.userAgent}`;
