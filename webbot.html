@@ -56,6 +56,9 @@
     <br />
     <br />
     <br />
+    <textarea id="browser" disabled cols="70" rows="4"></textarea>
+    <br />
+    <br />
     <embed src="https://www.youtube.com/embed/dQw4w9WgXcQ" width="600" height="400" />
     <p>Some filler</p>
     <button id="button2">Test alert box (does not work)</button>
@@ -86,6 +89,8 @@
                 }
             });
         }
+
+        document.getElementById('browser').textContent = `Your browser: ${navigator.userAgent}`;
 
         let visible = false;
         let progress = false;
