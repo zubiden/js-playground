@@ -14,6 +14,7 @@
 
         html, body {
             height: 100%;
+            padding: 0;
         }
 
         body {
@@ -38,7 +39,7 @@
                 hsl(270 100% 50% / 0%)
                 75%
             );
-            transition: --rotation 0.2s ease-in;
+            transition: --rotation 0.4s ease-in;
         }
 
         #rotate {
@@ -51,17 +52,47 @@
             padding: 0.5rem;
         }
     </style>
-    <style id="test">
-        body {--rotation: 0deg}
-    </style>
+    <style id="test"></style>
 </head>
 <body>
     <button id="rotate">Rotate</button>
+    <button id="switch">Switch theme</button>
     <script>
+        const styleTag = document.getElementById('test');
         let currentRotation = 0;
         document.getElementById('rotate').addEventListener('click', () => {
             currentRotation = (currentRotation + 60);
-            document.getElementById('test').textContent = `body {--rotation: ${currentRotation}deg}`;
+            document.body.style.setProperty('--rotation', `${currentRotation}deg`);
+        });
+
+        const TG_4 = `body {
+            background: linear-gradient(
+                var(--rotation),
+                #40CDDE,
+                transparent 75%
+            ),
+            linear-gradient(
+                calc(var(--rotation) + 90deg),
+                #AC86ED,
+                transparent 75%
+            ),
+            linear-gradient(
+                calc(var(--rotation) + 180deg),
+                #E984D8,
+                transparent 75%
+            ),
+            linear-gradient(
+                calc(var(--rotation) + 270deg),
+                #EFD359,
+                transparent 75%
+            );
+        }`
+        document.getElementById('switch').addEventListener('click', () => {
+            if (styleTag.textContent) {
+                styleTag.textContent = '';
+            } else {
+                styleTag.textContent = TG_4;
+            }
         });
     </script>
 </body>
