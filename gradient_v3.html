@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gradient background</title>
+    <style>
+        @property --rotation {
+            initial-value: 0deg;
+            inherits: false;
+            syntax: '<angle>';
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            background: linear-gradient(
+                var(--rotation),
+                hsl(0 100% 50% / 80%),
+                hsl(0 100% 50% / 0%)
+                75%
+            ), linear-gradient(
+                calc(var(--rotation) + 90deg),
+                hsl(90 100% 50% / 80%),
+                hsl(90 100% 50% / 0%)
+                75%
+            ), linear-gradient(
+                calc(var(--rotation) + 180deg),
+                hsl(180 100% 50% / 80%),
+                hsl(180 100% 50% / 0%)
+                75%
+            ), linear-gradient(
+                calc(var(--rotation) + 270deg),
+                hsl(270 100% 50% / 80%),
+                hsl(270 100% 50% / 0%)
+                75%
+            );
+            transition: --rotation 0.2s ease-in;
+        }
+
+        #rotate {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            
+            font-size: 2rem;
+            padding: 0.5rem;
+        }
+    </style>
+    <style id="test">
+        body {--rotation: 0deg}
+    </style>
+</head>
+<body>
+    <button id="rotate">Rotate</button>
+    <script>
+        let currentRotation = 0;
+        document.getElementById('rotate').addEventListener('click', () => {
+            currentRotation = (currentRotation + 60);
+            document.getElementById('test').textContent = `body {--rotation: ${currentRotation}deg}`;
+        });
+    </script>
+</body>
+</html>
