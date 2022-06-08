@@ -116,7 +116,7 @@
         });
 
         document.getElementById('headerBtn').addEventListener('click', () => {
-            Telegram.WebApp.setHeaderColor('#' + Math.floor(Math.random() * 16777215).toString(16));
+            Telegram.WebApp.setHeaderColor(Math.random() > 0.5 ? 'bg_color' : 'secondary_bg_color');
         });
 
         document.getElementById('backgroundBtn').addEventListener('click', () => {
