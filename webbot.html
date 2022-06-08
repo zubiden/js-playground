@@ -128,9 +128,9 @@
 
         document.getElementById('tglBack').addEventListener('click', () => {
             backVisible ? Telegram.WebApp.BackButton.hide() : Telegram.WebApp.BackButton.show();
-            visible = !visible;
+            backVisible = !backVisible;
             const text = tglBack.innerText.split(":")[0];
-            tglBack.innerText = `${text}: ${visible ? "Visible" : "Hidden"}`;
+            tglBack.innerText = `${text}: ${backVisible ? "Visible" : "Hidden"}`;
         });
 
         const tglBtn = document.getElementById('tglBtn');
