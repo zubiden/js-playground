@@ -55,7 +55,7 @@
     <a href="https://t.me/someunexistentchat1fd21">Test broken link</a>
     <br />
     <br />
-    <button id="headerBtn">Set random header color</button>
+    <button id="headerBtn">Toggle header color</button>
     <button id="backgroundBtn">Set random background color</button>
     <br />
     <textarea id="browser" disabled cols="70" rows="4"></textarea>
@@ -119,11 +119,11 @@
         });
 
         document.getElementById('headerBtn').addEventListener('click', () => {
-            Telegram.WebApp.setHeaderColor(Math.random() > 0.5 ? 'bg_color' : 'secondary_bg_color');
+            Telegram.WebApp.setHeaderColor(Telegram.WebApp.headerColor === 'bg_color' ? 'secondary_bg_color' : 'bg_color');
         });
 
         document.getElementById('backgroundBtn').addEventListener('click', () => {
-            Telegram.WebApp.setBackgroundColor('#' + Math.floor(Math.random() * 16777215).toString(16));
+            Telegram.WebApp.setBackgroundColor("#000000".replace(/0/g,() => (~~(Math.random()*16)).toString(16)));
         });
 
         document.getElementById('tglBack').addEventListener('click', () => {
