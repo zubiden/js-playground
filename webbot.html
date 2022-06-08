@@ -66,9 +66,11 @@
     <button id="button2">Test alert box (should work not)</button>
     <br />
 
-    <button id="tglBtn">Toggle button: </button>
+    <button id="tglBtn">Toggle main button: </button>
     <button id="tglProg">Toggle progress: </button>
     <button id="tglActive">Toggle active: </button>
+    <br/>
+    <button id="tglBack">Toggle back button: </button>
 
     <br />
     <textarea id="output" disabled cols="40" rows="20"></textarea>
@@ -105,6 +107,7 @@
         let visible = false;
         let progress = false;
         let active = false;
+        let backVisible = false;
         const button = document.getElementById('button');
         button.addEventListener('click', () => {
             Telegram.WebApp.sendData("Button was clicked at " + new Date());
@@ -121,6 +124,13 @@
 
         document.getElementById('backgroundBtn').addEventListener('click', () => {
             Telegram.WebApp.setBackgroundColor('#' + Math.floor(Math.random() * 16777215).toString(16));
+        });
+
+        document.getElementById('tglBack').addEventListener('click', () => {
+            backVisible ? Telegram.WebApp.BackButton.hide() : Telegram.WebApp.BackButton.show();
+            visible = !visible;
+            const text = tglBack.innerText.split(":")[0];
+            tglBack.innerText = `${text}: ${visible ? "Visible" : "Hidden"}`;
         });
 
         const tglBtn = document.getElementById('tglBtn');
@@ -150,6 +160,9 @@
         const output = document.getElementById('output');
         Telegram.WebApp.MainButton.onClick(() => {
             output.value += "Button was clicked at " + Date.now() + "\n";
+        });
+        Telegram.WebApp.BackButton.onClick(() => {
+            output.value += "Back button was clicked at " + Date.now() + "\n";
         });
     </script>
 </body>
