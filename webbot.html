@@ -55,13 +55,15 @@
     <a href="https://t.me/someunexistentchat1fd21">Test broken link</a>
     <br />
     <br />
+    <button id="headerBtn">Set random header color</button>
+    <button id="backgroundBtn">Set random background color</button>
     <br />
     <textarea id="browser" disabled cols="70" rows="4"></textarea>
     <br />
     <br />
     <embed src="https://www.youtube.com/embed/dQw4w9WgXcQ" width="600" height="400" />
     <p>Some filler</p>
-    <button id="button2">Test alert box (does not work)</button>
+    <button id="button2">Test alert box (should work not)</button>
     <br />
 
     <button id="tglBtn">Toggle button: </button>
@@ -111,6 +113,14 @@
         const button2 = document.getElementById('button2');
         button2.addEventListener('click', () => {
             alert('Hello');
+        });
+
+        document.getElementById('headerBtn').addEventListener('click', () => {
+            Telegram.WebApp.setHeaderColor('#' + Math.floor(Math.random() * 16777215).toString(16));
+        });
+
+        document.getElementById('backgroundBtn').addEventListener('click', () => {
+            Telegram.WebApp.setBackgroundColor('#' + Math.floor(Math.random() * 16777215).toString(16));
         });
 
         const tglBtn = document.getElementById('tglBtn');
