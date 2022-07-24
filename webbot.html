@@ -63,7 +63,9 @@
     <br />
     <embed src="https://www.youtube.com/embed/dQw4w9WgXcQ" width="600" height="400" />
     <p>Some filler</p>
-    <button id="button2">Test alert box (should work not)</button>
+    <button id="button2">Test alert box</button>
+    <br />
+    <button id="button3">Test requestStorageAccess</button>
     <br />
     <video src="./assets/sticker.webm" autoplay muted loop></video>
     <br />
@@ -118,6 +120,11 @@
         const button2 = document.getElementById('button2');
         button2.addEventListener('click', () => {
             alert('Hello');
+        });
+
+        const button3 = document.getElementById('button3');
+        button3.addEventListener('click', () => {
+            window.document.requestStorageAccess();
         });
 
         document.getElementById('headerBtn').addEventListener('click', () => {
