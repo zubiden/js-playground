@@ -66,6 +66,8 @@
     <button id="button2">Test alert box</button>
     <br />
     <button id="button3">Test requestStorageAccess</button>
+    <button id="button4">Set cookie</button>
+    <button id="button5">Read cookie</button>
     <br />
     <video src="./assets/sticker.webm" autoplay muted loop></video>
     <br />
@@ -125,6 +127,17 @@
         const button3 = document.getElementById('button3');
         button3.addEventListener('click', () => {
             window.document.requestStorageAccess();
+        });
+
+        const button4 = document.getElementById('button4');
+        button4.addEventListener('click', () => {
+            document.cookie = "yummy_cookie=choco";
+            document.cookie = "tasty_cookie=strawberry";
+        });
+
+        const button5 = document.getElementById('button5');
+        button5.addEventListener('click', () => {
+            alert(window.document.cookie);
         });
 
         document.getElementById('headerBtn').addEventListener('click', () => {
