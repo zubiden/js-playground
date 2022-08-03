@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="origin-trial"
+        content="AogYkfsnYRkScjyVDt6j2tuvwUnapGv18/uEK3pUE2T3716Tx8c7rCj2fy0Zn0xmFlqw8Y7SfaoKEF8iWwv2fQIAAABfeyJvcmlnaW4iOiJodHRwczovL3p1YmlkZW4uZ2l0aHViLmlvOjQ0MyIsImZlYXR1cmUiOiJEb2N1bWVudFRyYW5zaXRpb25WMiIsImV4cGlyeSI6MTY2NjEzNzU5OX0=">
+    <title>Shared Element Transitions test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body,
+        .chat {
+            height: 100%;
+        }
+
+        .chat {
+            display: flex;
+            flex-direction: column;
+            padding: 1rem;
+            box-sizing: border-box;
+        }
+
+        #messages {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: flex-end;
+            gap: 0.5rem;
+            flex-grow: 1;
+            padding: 2rem;
+            min-height: 10rem;
+        }
+
+        .input-row {
+            display: flex;
+            flex-direction: row;
+            gap: 0.5rem;
+            padding: 0.5rem;
+        }
+
+        #input {
+            flex-grow: 1;
+            resize: none;
+        }
+
+        #video {
+            contain: paint;
+        }
+
+        .service {
+            align-self: center;
+            background-color: #999;
+            color: #eee;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+        }
+
+        .message {
+            contain: paint;
+        }
+
+        .message:not(.transparent) {
+            background-color: #78c278;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+        }
+
+        ::page-transition-outgoing-image(root) {
+            opacity: 0;
+            animation: none;
+        }
+
+        ::page-transition-incoming-image(root) {
+            opacity: 1;
+            animation: none;
+        }
+
+        ::page-transition-outgoing-image(video) {
+            opacity: 1;
+        }
+
+        ::page-transition-incoming-image(video) {
+            animation: none;
+            opacity: 1;
+        }
+
+        ::page-transition-outgoing-image(message) {
+            opacity: 1;
+        }
+
+        ::page-transition-incoming-image(message) {
+            animation: none;
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="chat">
+        <div id="messages">
+            <div class="service">Messages will be displayed below</div>
+        </div>
+        <div class="input-row">
+            <video id="video" src="./assets/sticker.webm" style="page-transition-tag: video" autoplay muted></video>
+            <textarea id="input" type="text" placeholder="Enter your messsage" rows="2"></textarea>
+            <button id="send">Send</button>
+        </div>
+    </div>
+    <script>
+        const messages = document.getElementById('messages');
+        const input = document.getElementById('input');
+        const send = document.getElementById('send');
+        const video = document.getElementById('video');
+
+        send.addEventListener('click', async () => {
+            if (document.createDocumentTransition) {
+                prepareMessageAnimation();
+                const transition = document.createDocumentTransition();
+
+                await transition.start(() => {
+                    sendMessage();
+                });
+                document.querySelectorAll('.message').forEach(message => message.style.pageTransitionTag = '');
+            } else {
+                sendMessage();
+            }
+        });
+
+        video.addEventListener('click', async () => {
+            if (document.createDocumentTransition) {
+                const transition = document.createDocumentTransition();
+
+                await transition.start(() => {
+                    sendVideo();
+                });
+                document.querySelectorAll('video').forEach(video => video.setAttribute('style', ''));
+                video.style.pageTransitionTag = 'video';
+            } else {
+                sendVideo();
+            }
+        });
+
+        function sendVideo() {
+            video.style.pageTransitionTag = '';
+            const message = document.createElement('div');
+            message.classList.add('message');
+            message.classList.add('transparent');
+            message.innerHTML = `<video src="./assets/sticker.webm" style="page-transition-tag: video; contain: paint;" autoplay muted loop></video>`;
+            messages.appendChild(message);
+        }
+
+        function prepareMessageAnimation() {
+            document.querySelectorAll('.message').forEach(message => message.style.pageTransitionTag = '');
+            const message = document.createElement('div');
+            message.classList.add('message');
+            message.innerText = input.value;
+            message.id = 'ghost';
+            const rect = input.getBoundingClientRect();
+            const textSize = calculateTextSize(input.value);
+            message.style.position = 'fixed';
+            message.style.left = `${rect.left}px`;
+            message.style.top = `${rect.top}px`;
+            message.style.width = `${textSize.width}px`;
+            message.style.height = `${textSize.height}px`;
+            message.style.pageTransitionTag = 'message';
+            document.body.appendChild(message);
+        }
+
+        function sendMessage() {
+            document.getElementById('ghost').remove();
+            const message = document.createElement('div');
+            message.classList.add('message');
+            message.innerText = input.value;
+            message.style.pageTransitionTag = 'message';
+            messages.appendChild(message);
+            input.value = '';
+        }
+
+        function calculateTextSize(text) {
+            const span = document.createElement('span');
+            span.innerText = text;
+            span.style.position = 'fixed';
+            span.style.visibility = 'hidden';
+            span.style.maxWidth = `${input.getBoundingClientRect()}px`;
+            document.body.appendChild(span);
+            const size = {
+                width: span.offsetWidth,
+                height: span.offsetHeight
+            };
+            document.body.removeChild(span);
+            return size;
+        }
+    </script>
+</body>
+
+</html>
