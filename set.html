@@ -154,7 +154,12 @@
             const message = document.createElement('div');
             message.classList.add('message');
             message.classList.add('transparent');
-            message.innerHTML = `<video src="./assets/sticker.webm" style="page-transition-tag: video; contain: paint;" autoplay muted loop></video>`;
+            message.innerHTML = `<video
+                src="./assets/sticker.webm"
+                style="page-transition-tag: video; contain: paint; width: 64px; height: 64px;"
+                autoplay
+                muted
+                loop></video>`;
             messages.appendChild(message);
         }
 
