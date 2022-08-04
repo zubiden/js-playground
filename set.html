@@ -12,12 +12,44 @@
         body {
             margin: 0;
             padding: 0;
+
+            color: var(--color);
+            background-color: var(--backgroundColor);
+            contain: paint;
         }
 
         html,
         body,
         .chat {
             height: 100%;
+        }
+
+        body {
+            --color: #000;
+            --backgroundColor: #fff;
+            --serviceBackground: #999;
+            --serviceColor: #eee;
+            --messageBackground: #78c278;
+            --textareaBackground: #fff;
+            --textareaColor: #000;
+        }
+
+        body.dark {
+            --color: white;
+            --backgroundColor: black;
+            --serviceBackground: #333;
+            --serviceColor: #999;
+            --messageBackground: #78c278;
+            --textareaBackground: #444;
+            --textareaColor: #fff;
+        }
+
+        #theme {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            cursor: pointer;
+            font-size: 2rem;
         }
 
         .chat {
@@ -48,6 +80,8 @@
         #input {
             flex-grow: 1;
             resize: none;
+            background-color: var(--textareaBackground);
+            color: var(--textareaColor);
         }
 
         #video {
@@ -74,28 +108,54 @@
 
         .service {
             align-self: center;
-            background-color: #999;
-            color: #eee;
+            background-color: var(--serviceBackground);
+            color: var(--serviceColor);
             padding: 0.5rem;
             border-radius: 0.5rem;
         }
 
         .message {
             contain: paint;
+            max-width: 80%;
+            word-break: break-word;
         }
 
-        .message:not(.transparent) {
-            background-color: #78c278;
+        .sticker {
+            cursor: pointer;
+        }
+
+        .message:not(.sticker) {
+            background-color: var(--messageBackground);
             padding: 0.5rem;
             border-radius: 0.5rem;
         }
 
+        /* Disable default global transition */
         ::page-transition-outgoing-image(root) {
             opacity: 0;
             animation: none;
         }
 
         ::page-transition-incoming-image(root) {
+            opacity: 1;
+            animation: none;
+        }
+
+        ::page-transition-incoming-image(body) {
+            opacity: 1;
+            z-index: 10;
+            -webkit-mask-image: url("data:image/svg+xml,%3Csvg class='star-svg' version='1.1' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/2000/xlink' width='21px' height='20px'%3E%3Cpath d='M9.5 14.25l-5.584 2.936 1.066-6.218L.465 6.564l6.243-.907L9.5 0l2.792 5.657 6.243.907-4.517 4.404 1.066 6.218' /%3E%3C/svg%3E");
+            mask-image: url("data:image/svg+xml,%3Csvg class='star-svg' version='1.1' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/2000/xlink' width='21px' height='20px'%3E%3Cpath d='M9.5 14.25l-5.584 2.936 1.066-6.218L.465 6.564l6.243-.907L9.5 0l2.792 5.657 6.243.907-4.517 4.404 1.066 6.218' /%3E%3C/svg%3E");
+            -webkit-mask-position: 50% 50%;
+            mask-position: 50% 50%;
+            -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+            -webkit-mask-mode: luminance;
+            mask-mode: luminance;
+            animation: maskExpand 0.5s forwards ease-in-out;
+        }
+
+        ::page-transition-outgoing-image(body) {
             opacity: 1;
             animation: none;
         }
@@ -126,11 +186,23 @@
             animation: none;
             opacity: 1;
         }
+
+        @keyframes maskExpand {
+            from {
+                -webkit-mask-size: 0;
+                mask-size: 0;
+            }
+            to {
+                -webkit-mask-size: 400%;
+                mask-size: 400%;
+            }
+        }
     </style>
 </head>
 
 <body>
     <div class="chat">
+        <div id="theme">🌚</div>
         <div id="messages">
             <div class="service">Messages will be displayed below</div>
         </div>
@@ -145,6 +217,20 @@
         const input = document.getElementById('input');
         const send = document.getElementById('send');
         const video = document.getElementById('video');
+        const theme = document.getElementById('theme');
+
+        theme.addEventListener('click', async () => {
+            if (document.createDocumentTransition) {
+                const transition = document.createDocumentTransition();
+                document.body.style.pageTransitionTag = 'body';
+                await transition.start(() => {
+                    toggleTheme();
+                });
+                document.body.style.pageTransitionTag = '';
+            } else {
+                toggleTheme();
+            }
+        });
 
         send.addEventListener('click', async () => {
             if (document.createDocumentTransition) {
@@ -162,23 +248,28 @@
 
         video.addEventListener('click', async () => {
             if (document.createDocumentTransition) {
+                video.style.pageTransitionTag = 'video';
                 const transition = document.createDocumentTransition();
 
                 await transition.start(() => {
                     sendVideo();
                 });
                 document.querySelectorAll('video').forEach(video => video.setAttribute('style', ''));
-                video.style.pageTransitionTag = 'video';
             } else {
                 sendVideo();
             }
         });
 
+        function toggleTheme() {
+            document.body.classList.toggle('dark');
+            theme.textContent = document.body.classList.contains('dark') ? '🌞' : '🌚';
+        }
+
         function sendVideo() {
             video.style.pageTransitionTag = '';
             const message = document.createElement('div');
             message.classList.add('message');
-            message.classList.add('transparent');
+            message.classList.add('sticker');
             message.innerHTML = `<video
                 src="./assets/sticker.webm"
                 style="page-transition-tag: video; contain: paint; width: 64px; height: 64px;"
