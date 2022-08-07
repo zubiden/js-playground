@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Font renderer</title>
+    <style>
+        body {
+            padding: 0;
+            background-color: #999;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .inputs {
+            display: flex;
+            flex-direction: column;
+            min-width: 25rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="inputs">
+        <input type="text" id="font" value="Comic Sans MS" placeholder="font">
+        <input type="text" id="symbols" value="ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!?.#%" placeholder="Symbols">
+        <label>
+            Outline
+            <input type="range" id="outline" min="0" max="20" value="10">
+        </label>
+        <br/>
+        <input type="text" id="previewLetter" value="K" placeholder="Preview letter">
+        <button id="preview">Preview</button>
+        <button id="export">Export as archive</button>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+        const fontInput = document.getElementById('font');
+        const symbolsInput = document.getElementById('symbols');
+        const outlineInput = document.getElementById('outline');
+        const previewLetterInput = document.getElementById('previewLetter');
+        const previewButton = document.getElementById('preview');
+        const exportButton = document.getElementById('export');
+
+        const canvas = document.getElementById('canvas');
+
+        const SIZE = 100;
+
+        previewButton.addEventListener('click', () => {
+            render(canvas, previewLetterInput.value, SIZE);
+        });
+
+        exportButton.addEventListener('click', exportArchive);
+
+        function render(canvas, letter, size) {
+            canvas.width = size;
+            canvas.height = size;
+            const outline = outlineInput.value;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const fontSize = size - outline; // Preveny outline cutout
+            ctx.font = `${fontSize}px ${fontInput.value}`;
+            ctx.textBaseline = 'bottom';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#000';
+            ctx.strokeStyle = '#fff';
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = outline;
+            ctx.strokeText(letter, canvas.width / 2, canvas.height - outline / 2);
+            ctx.fillText(letter, canvas.width / 2, canvas.height - outline / 2);
+        }
+
+        function exportArchive() {
+            const promises = symbolsInput.value.split('').map(letter => {
+                return new Promise((resolve) => {
+                    const letterCanvas = document.createElement('canvas');
+                    render(letterCanvas, letter, SIZE);
+                    return letterCanvas.toBlob((blob) => {
+                        setTimeout(() => letterCanvas.remove(), 1);
+                        console.log(letter, 'done');
+                        resolve({ letter, blob })
+                    }, 'image/webp', 1);
+                });
+            });
+            Promise.all(promises).then((results) => {
+                const zip = new JSZip();
+                results.forEach(({ letter, blob }) => {
+                    zip.file(`${letter}.webp`, blob);
+                });
+                zip.generateAsync({type: 'blob'}).then(content => {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(content);
+                    link.download = 'font.zip';
+                    link.click();
+                });
+            });
+        }
+    </script>
+</body>
+</html>
