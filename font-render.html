@@ -19,6 +19,12 @@
             flex-direction: column;
             min-width: 25rem;
         }
+
+        #canvas {
+            border: 1px solid black;
+            width: 100px;
+            height: 100px;
+        }
     </style>
 </head>
 <body>
@@ -29,6 +35,10 @@
             Outline
             <input type="range" id="outline" min="0" max="20" value="10">
         </label>
+        <select id="format">
+            <option value="image/png">PNG</option>
+            <option value="image/webp" selected>WEBP</option>
+        </select>
         <br/>
         <input type="text" id="previewLetter" value="K" placeholder="Preview letter">
         <button id="preview">Preview</button>
@@ -43,6 +53,7 @@
         const symbolsInput = document.getElementById('symbols');
         const outlineInput = document.getElementById('outline');
         const previewLetterInput = document.getElementById('previewLetter');
+        const formatInput = document.getElementById('format');
         const previewButton = document.getElementById('preview');
         const exportButton = document.getElementById('export');
 
@@ -75,6 +86,7 @@
         }
 
         function exportArchive() {
+            const format = formatInput.value;
             const promises = symbolsInput.value.split('').map(letter => {
                 return new Promise((resolve) => {
                     const letterCanvas = document.createElement('canvas');
@@ -83,13 +95,13 @@
                         setTimeout(() => letterCanvas.remove(), 1);
                         console.log(letter, 'done');
                         resolve({ letter, blob })
-                    }, 'image/webp', 1);
+                    }, format, 1);
                 });
             });
             Promise.all(promises).then((results) => {
                 const zip = new JSZip();
                 results.forEach(({ letter, blob }) => {
-                    zip.file(`${letter}.webp`, blob);
+                    zip.file(`${letter}.${format.split('/').pop()}`, blob);
                 });
                 zip.generateAsync({type: 'blob'}).then(content => {
                     const link = document.createElement('a');
