@@ -60,6 +60,7 @@
     <br />
     <textarea id="browser" disabled cols="70" rows="4"></textarea>
     <br />
+    <button id="buttonPopup">Open popup</button>
     <br />
     <embed src="https://www.youtube.com/embed/dQw4w9WgXcQ" width="600" height="400" />
     <p>Some filler</p>
@@ -75,7 +76,7 @@
     <button id="tglBtn">Toggle main button: </button>
     <button id="tglProg">Toggle progress: </button>
     <button id="tglActive">Toggle active: </button>
-    <br/>
+    <br />
     <button id="tglBack">Toggle back button: </button>
 
     <br />
@@ -145,7 +146,7 @@
         });
 
         document.getElementById('backgroundBtn').addEventListener('click', () => {
-            Telegram.WebApp.setBackgroundColor("#000000".replace(/0/g,() => (~~(Math.random()*16)).toString(16)));
+            Telegram.WebApp.setBackgroundColor("#000000".replace(/0/g, () => (~~(Math.random() * 16)).toString(16)));
         });
 
         document.getElementById('tglBack').addEventListener('click', () => {
@@ -185,6 +186,24 @@
         });
         Telegram.WebApp.BackButton.onClick(() => {
             output.value += "Back button was clicked at " + Date.now() + "\n";
+        });
+
+        document.getElementById('buttonPopup').addEventListener('click', () => {
+            Telegram.WebApp.showPopup({
+                title: 'Popup title',
+                message: 'Popup message',
+                buttons: [
+                    { id: 'delete', type: 'destructive', text: 'Delete all' },
+                    { id: 'empty', type: 'default' },
+                    { type: 'cancel' },
+                ]
+            }, function (button_id) {
+                if (button_id == 'delete') {
+                    DemoApp.showAlert("'Delete all' selected");
+                } else if (button_id == 'empty') {
+                    Telegram.WebApp.openLink('https://telegram.org');
+                }
+            });
         });
     </script>
 </body>
