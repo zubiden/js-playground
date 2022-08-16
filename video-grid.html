@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video grid cropper</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #video-wrapper {
+            position: relative;
+            margin-top: 1rem;
+        }
+
+        #video-wrapper::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('./assets/grid.png');
+            background-position: center;
+        }
+
+        #stats {
+            white-space: pre;
+            text-align: center;
+        }
+
+        #status {
+            margin-top: 1rem;
+        }
+
+        #commands {
+            margin-top: 5rem;
+        }
+
+        #commands pre {
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Video grid splitter for Telegram Emoji</h1>
+    <input type="file" id="file" accept="video/mp4,video/webm" />
+    <div id="video-wrapper"></div>
+    <div id="stats"></div>
+    <button id="start" hidden>Crop and convert to .webm</button>
+    <span id="status"></span>
+
+    <div id="commands"></div>
+    <script src="./scripts/ffmpeg.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
+        integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer">
+        </script>
+    <script src="./scripts/coi-serviceworker.js"></script>
+    <script>
+        const CORE_URL = location.hostname === 'localhost' ? "http://localhost:3000/scripts/ffmpeg-core.js" : "https://zubiden.github.io/js-playground/scripts/ffmpeg-core.js";
+        const EMOJI_SIZE = 100;
+        const file = document.getElementById('file');
+        const videoWrapper = document.getElementById('video-wrapper');
+        const start = document.getElementById('start');
+        const status = document.getElementById('status');
+        const commands = document.getElementById('commands');
+
+        let isWebm = false;
+        let resize = {};
+
+        let step = 'convert';
+        const ffmpeg = FFmpeg.createFFmpeg({
+            corePath: 'http://localhost:3000/scripts/ffmpeg-core.js',
+            log: true,
+        });
+
+        ffmpeg.setProgress(({ ratio }) => {
+            status.textContent = `${step === 'convert' ? 'Converting' : 'Splitting'}: ${Math.round(ratio * 100)}%`;
+            console.warn(ratio);
+            if (ratio < 0 || ratio > 1) status.textContent = 'Something wrong. Check console';
+        });
+
+        file.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            isWebm = file.type === 'video/webm';
+            const url = URL.createObjectURL(file);
+            const vid = document.createElement('video');
+            vid.src = url;
+            vid.controls = true;
+            vid.autoplay = true;
+            vid.loop = true;
+            vid.muted = true;
+            videoWrapper.replaceChildren(vid);
+            vid.addEventListener('loadedmetadata', function (e) {
+                const width = vid.videoWidth;
+                const height = vid.videoHeight;
+                resize = {
+                    width,
+                    height,
+                };
+                const stats = document.getElementById('stats');
+                stats.textContent = `Size: ${width} x ${height}`;
+                if (width % EMOJI_SIZE !== 0 || height % EMOJI_SIZE !== 0) {
+                    const resizedWidth = Math.ceil(width / EMOJI_SIZE) * EMOJI_SIZE;
+                    const resizedHeight = Math.ceil(height / EMOJI_SIZE) * EMOJI_SIZE;
+                    resize = {
+                        width: resizedWidth,
+                        height: resizedHeight,
+                    };
+                    stats.textContent += `\nWill be resized to ${resizedWidth} x ${resizedHeight}`;
+                }
+            });
+            start.hidden = false;
+        });
+
+        start.addEventListener('click', async (e) => {
+            status.textContent = 'Loading FFmpeg...';
+            if (!ffmpeg.isLoaded()) await ffmpeg.load();
+            status.textContent = 'Loading video...';
+            const file = await FFmpeg.fetchFile(videoWrapper.querySelector('video').src);
+            const input = `video.${isWebm ? 'webm' : 'mp4'}`;
+            const output = 'output.webm';
+            ffmpeg.FS('writeFile', input, file);
+            status.textContent = 'Converting...';
+            start.hidden = true;
+
+            const conversionCommand = [
+                '-i', input,
+                '-vf', `scale='min(${resize.width},iw)':min'(${resize.height},ih)':force_original_aspect_ratio=decrease,pad=${resize.width}:${resize.height}:-1:-1:color=0x00000000, fps=30`,
+                '-c:v', 'libvpx-vp9',
+                '-row-mt', '1',
+                '-an',
+                output,
+            ];
+            const gridCommand = generateGridCommand(output);
+
+            printCommands(conversionCommand, gridCommand);
+
+            try {
+                await ffmpeg.run(...conversionCommand);
+            } catch (e) {
+                status.textContent = 'Error: ' + e.message;
+                return;
+            }
+            ffmpeg.FS('unlink', input);
+            step = 'split';
+            try {
+                await ffmpeg.run(...gridCommand);
+            } catch (e) {
+                status.textContent = 'Error: ' + e.message;
+                return;
+            }
+            ffmpeg.FS('unlink', output);
+            status.textContent = 'Retrieving result...';
+
+            const { total } = getSize();
+
+            let retrieved = 0;
+
+            const parts = Array(total).fill(0).map((_, i) => ffmpeg.FS('readFile', `output-${i + 1}.webm`).buffer);
+
+            const zip = new JSZip();
+            parts.forEach((bytes, i) => {
+                const blob = new Blob([bytes], { type: 'video/webm' });
+                zip.file(`part-${i + 1}.webm`, blob);
+            });
+            zip.generateAsync({ type: 'blob' }).then(content => {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(content);
+                link.download = 'split.zip';
+                link.click();
+            });
+            status.textContent = 'Done! Download should start automatically.';
+        });
+
+        function getSize() {
+            const { width, height } = resize;
+            const h = Math.ceil(height / EMOJI_SIZE);
+            const v = Math.ceil(width / EMOJI_SIZE);
+            const total = h * v;
+
+            return {
+                v, h, total,
+            }
+        }
+
+        function generateGridCommand(input) {
+            const { v, h, total } = getSize();
+
+            const naturalNumbers = Array.from(Array(total).keys());
+
+            const splitPart = `[0]split=${total}${naturalNumbers.map((n) => `[out${n}]`).join('')}`;
+
+            let cropFilters = '';
+            let i = 0;
+            for (let y = 0; y < v; y++) {
+                for (let x = 0; x < h; x++) {
+                    cropFilters += `;[out${i}]crop=`;
+                    cropFilters += `iw/${v}:ih/${h}:`;
+                    cropFilters += `iw/${v}*${x}:ih/${h}*${y}`;
+                    cropFilters += `[out${i}]`;
+                    i++;
+                }
+            }
+            const output = naturalNumbers.flatMap((n) => ['-map', `[out${n}]`, `output-${n + 1}.webm`]);
+            const filter = `${splitPart}${cropFilters}`;
+
+            return [
+                '-i', input,
+                '-filter_complex', filter,
+                ...output,
+            ];
+        }
+
+        function printCommands(conversion, grid) {
+            commands.innerHTML = `In case if process fails (you'll see Out Of Memory (OEM) error in the console), here your commands for ffmpeg. Don't forget to replace filenames.
+                <pre>ffmpeg ${conversion.join(' ')}</pre>
+                <pre>ffmpeg ${grid.join(' ')}</pre>`;
+        }
+    </script>
+</body>
+
+</html>
