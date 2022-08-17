@@ -5,12 +5,17 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
     <title>Video grid cropper</title>
     <style>
         body {
             display: flex;
             flex-direction: column;
             align-items: center;
+
+            font-family: 'Roboto', sans-serif;
         }
 
         #video-wrapper {
@@ -25,8 +30,10 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-image: url('./assets/grid.png');
-            background-position: center;
+            background-image:
+                repeating-linear-gradient(#333 0 1px, transparent 1px 100%),
+                repeating-linear-gradient(90deg, #333 0 1px, transparent 1px 100%);
+            background-size: 100px 100px;
         }
 
         #stats {
@@ -35,6 +42,10 @@
         }
 
         #status {
+            margin-top: 1rem;
+        }
+
+        #start {
             margin-top: 1rem;
         }
 
@@ -57,12 +68,15 @@
     <span id="status"></span>
 
     <div id="commands"></div>
+
+    <!--  Scripts required to be local for SharedArrayBuffer to work  -->
     <script src="./scripts/ffmpeg.min.js"></script>
+    <script src="coi-serviceworker.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
         integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg=="
         crossorigin="anonymous" referrerpolicy="no-referrer">
         </script>
-    <script src="coi-serviceworker.js"></script>
+
     <script>
         const CORE_URL = location.hostname === 'localhost' ? "http://localhost:3000/scripts/ffmpeg-core.js" : "https://zubiden.github.io/js-playground/scripts/ffmpeg-core.js";
         const EMOJI_SIZE = 100;
@@ -84,7 +98,12 @@
         ffmpeg.setProgress(({ ratio }) => {
             status.textContent = `${step === 'convert' ? 'Converting' : 'Splitting'}: ${Math.round(ratio * 100)}%`;
             console.warn(ratio);
-            if (ratio < 0 || ratio > 1) status.textContent = 'Something wrong. Check console';
+            if (ratio < 0 || ratio > 1) {
+                // Sometimes ffmpeg reports progress outside of 0-1 range before correcting itself
+                setTimeout(() => {
+                    status.textContent = 'Something wrong. Check console';
+                }, 1000);
+            }
         });
 
         file.addEventListener('change', (e) => {
@@ -133,9 +152,10 @@
 
             const conversionCommand = [
                 '-i', input,
-                '-vf', `scale='min(${resize.width},iw)':min'(${resize.height},ih)':force_original_aspect_ratio=decrease,pad=${resize.width}:${resize.height}:-1:-1:color=0x00000000, fps=30`,
+                '-vf', `scale='min(${resize.width},iw)':min'(${resize.height},ih)':force_original_aspect_ratio=decrease,pad=${resize.width}:${resize.height}:-1:-1:color=0x00000000,fps=30`,
                 '-c:v', 'libvpx-vp9',
                 '-row-mt', '1',
+                '-lossless', '1',
                 '-an',
                 output,
             ];
@@ -166,8 +186,14 @@
 
             const parts = Array(total).fill(0).map((_, i) => ffmpeg.FS('readFile', `output-${i + 1}.webm`).buffer);
 
+            zipAndDownload(parts);
+
+            status.textContent = 'Done! Download should start automatically.';
+        });
+
+        function zipAndDownload(fileBytes) {
             const zip = new JSZip();
-            parts.forEach((bytes, i) => {
+            fileBytes.forEach((bytes, i) => {
                 const blob = new Blob([bytes], { type: 'video/webm' });
                 zip.file(`part-${i + 1}.webm`, blob);
             });
@@ -177,18 +203,15 @@
                 link.download = 'split.zip';
                 link.click();
             });
-            status.textContent = 'Done! Download should start automatically.';
-        });
+        }
 
         function getSize() {
             const { width, height } = resize;
-            const h = Math.ceil(height / EMOJI_SIZE);
-            const v = Math.ceil(width / EMOJI_SIZE);
+            const v = Math.ceil(height / EMOJI_SIZE); // Vertical split
+            const h = Math.ceil(width / EMOJI_SIZE); // Horizontal split
             const total = h * v;
 
-            return {
-                v, h, total,
-            }
+            return { v, h, total };
         }
 
         function generateGridCommand(input) {
@@ -203,8 +226,8 @@
             for (let y = 0; y < v; y++) {
                 for (let x = 0; x < h; x++) {
                     cropFilters += `;[out${i}]crop=`;
-                    cropFilters += `iw/${v}:ih/${h}:`;
-                    cropFilters += `iw/${v}*${x}:ih/${h}*${y}`;
+                    cropFilters += `iw/${h}:ih/${v}:`;
+                    cropFilters += `iw/${h}*${x}:ih/${v}*${y}`;
                     cropFilters += `[out${i}]`;
                     i++;
                 }
