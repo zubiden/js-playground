@@ -34,6 +34,20 @@
         <label>
             Outline
             <input type="range" id="outline" min="0" max="20" value="10">
+            <span id="outlineValue">10</span>
+        </label>
+        <label>
+            Font Size
+            <input type="range" id="fontSize" min="20" max="100" value="90">
+            <span id="fontSizeValue">90</span>
+        </label>
+        <label>
+            Font Color
+            <input type="color" id="fontColor" value="#000000">
+        </label>
+        <label>
+            Outline Color
+            <input type="color" id="outlineColor" value="#FFFFFF">
         </label>
         <select id="format">
             <option value="image/png">PNG</option>
@@ -52,14 +66,25 @@
         const fontInput = document.getElementById('font');
         const symbolsInput = document.getElementById('symbols');
         const outlineInput = document.getElementById('outline');
+        const fontSizeInput = document.getElementById('fontSize');
         const previewLetterInput = document.getElementById('previewLetter');
         const formatInput = document.getElementById('format');
+        const fontColorInput = document.getElementById('fontColor');
+        const outlineColorInput = document.getElementById('outlineColor');
         const previewButton = document.getElementById('preview');
         const exportButton = document.getElementById('export');
 
         const canvas = document.getElementById('canvas');
 
         const SIZE = 100;
+
+        outlineInput.addEventListener('input', () => {
+            document.getElementById('outlineValue').innerText = outlineInput.value;
+        });
+
+        fontSizeInput.addEventListener('input', () => {
+            document.getElementById('fontSizeValue').innerText = fontSizeInput.value;
+        });
 
         previewButton.addEventListener('click', () => {
             render(canvas, previewLetterInput.value, SIZE);
@@ -73,16 +98,15 @@
             const outline = outlineInput.value;
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const fontSize = size - outline; // Preveny outline cutout
-            ctx.font = `${fontSize}px ${fontInput.value}`;
+            ctx.font = `${fontSizeInput.value}px ${fontInput.value}`;
             ctx.textBaseline = 'bottom';
             ctx.textAlign = 'center';
-            ctx.fillStyle = '#000';
-            ctx.strokeStyle = '#fff';
+            ctx.fillStyle = fontColorInput.value;
+            ctx.strokeStyle = outlineColorInput.value;
             ctx.lineJoin = 'round';
             ctx.lineWidth = outline;
-            ctx.strokeText(letter, canvas.width / 2, canvas.height - outline / 2);
-            ctx.fillText(letter, canvas.width / 2, canvas.height - outline / 2);
+            ctx.strokeText(letter, canvas.width / 2, canvas.height - outline);
+            ctx.fillText(letter, canvas.width / 2, canvas.height - outline);
         }
 
         function exportArchive() {
