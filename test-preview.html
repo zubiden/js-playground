@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test preview fragment</title>
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: space-evenly;
+        }
+
+        #seekline {
+            height: 10px;
+            background-color: #333;
+            margin-top: 1rem;
+            cursor: pointer;
+        }
+
+        #preview {
+            width: 15rem;
+
+            background-color: black;
+        }
+    </style>
+</head>
+
+<body>
+    <div>
+        <video id="original" src="https://storage.googleapis.com/media-session/caminandes/short.mp4" controls></video>
+        <div id="seekline"></div>
+    </div>
+    <video id="preview" src="https://storage.googleapis.com/media-session/caminandes/short.mp4"></video>
+
+    <script>
+        const seekline = document.getElementById('seekline');
+        const preview = document.getElementById('preview');
+        const original = document.getElementById('original');
+
+        const throttle = (func, limit) => {
+            let inThrottle
+            return function () {
+                const args = arguments
+                const context = this
+                if (!inThrottle) {
+                    func.apply(context, args)
+                    inThrottle = true
+                    setTimeout(() => inThrottle = false, limit)
+                }
+            }
+        }
+
+        seekline.addEventListener('mousemove', throttle((e) => {
+            const { left, width } = seekline.getBoundingClientRect();
+            const x = e.clientX - left;
+            const percentage = x / width;
+            const duration = original.duration;
+            const time = duration * percentage;
+            const roundedTime = Math.floor(time * 10 ) / 10;
+            preview.src = `${original.src}#t=${roundedTime}`
+        }, 500))
+
+        seekline.addEventListener('click', (e) => {
+            const { left, width } = seekline.getBoundingClientRect();
+            const x = e.clientX - left;
+            const percentage = x / width;
+            const duration = original.duration;
+            const time = duration * percentage;
+            original.currentTime = time;
+        })
+    </script>
+</body>
+
+</html>
