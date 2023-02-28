@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VP9 test</title>
+</head>
+
+<body>
+    <button id="trigger">Toggle videos</button>
+    <canvas id="canvas" width="32" height="32"></canvas>
+    <div id="info"></div>
+    <div id="container"></div>
+    <script>
+        const VIDEO_COUNT = 20;
+        const VIDEO_URL = './assets/test.webm';
+
+        const container = document.getElementById('container');
+        const trigger = document.getElementById('trigger');
+        const canvas = document.getElementById('canvas');
+        const info = document.getElementById('info');
+
+        let lastFrameTime = performance.now();
+        let maxFrameTime = 0;
+
+        trigger.addEventListener('click', () => {
+            maxFrameTime = 0;
+            info.textContent = '';
+
+            if (container.children.length) {
+                while (container.firstChild) {
+                    container.removeChild(container.firstChild);
+                }
+                return;
+            }
+
+            for (let i = 0; i < VIDEO_COUNT; i++) {
+                const video = document.createElement('video');
+                video.src = VIDEO_URL;
+                video.autoplay = true;
+                video.loop = true;
+                video.muted = true;
+                container.appendChild(video);
+            }
+        });
+
+        let frame = 0;
+        function draw() {
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = 'white';
+            ctx.font = '20px Arial';
+            ctx.fillText(frame, 10, 20);
+            frame = (frame + 1) % 100;
+
+            const now = performance.now();
+            const frameTime = now - lastFrameTime;
+            lastFrameTime = now;
+            if (frameTime > maxFrameTime) {
+                maxFrameTime = frameTime;
+                info.textContent = `Max frame time: ${maxFrameTime.toFixed(2)}ms`;
+            }
+
+            requestAnimationFrame(draw);
+        }
+        draw();
+    </script>
+</body>
+
+</html>
