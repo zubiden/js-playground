@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color test</title>
+    <style>
+        :root {
+            background-color: black;
+        }
+
+        .demo {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+        }
+
+        img,
+        canvas,
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .colorable {
+            filter: url(#colorable);
+        }
+    </style>
+</head>
+
+<body>
+    <svg height="0px" width="0px">
+        <defs>
+            <filter id="colorable" color-interpolation-filters="sRGB">
+                <feColorMatrix type="matrix" values="0 0 0 0 1
+                                                 0 0 0 0 0
+                                                 0 0 0 0 0
+                                                 0 0 0 1 0" />
+            </filter>
+        </defs>
+    </svg>
+    <input id="color" type="color" value="#ff0000">
+    <div class="demo">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/d/d2/MDN_Web_Docs_logo.svg" class="colorable" />
+        <video src="https://simpl.info/videoalpha/video/dancer1.webm" autoplay loop muted class="colorable"></video>
+        <img src="https://www.gstatic.com/webp/gallery3/3_webp_a.webp" class="colorable">
+        <canvas id="canvas" class="colorable"></canvas>
+    </div>
+
+    <script>
+        // https://stackoverflow.com/a/62880368
+        // updateFilter('#ff0000');
+        document.getElementById('color').addEventListener('input', (e) => {
+            updateFilter(e.target.value);
+        });
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        // Set canvas size to 200x200 and draw a green five-pointed star
+        canvas.width = 200;
+        canvas.height = 200;
+        ctx.fillStyle = 'green';
+        ctx.beginPath();
+        ctx.moveTo(100, 10);
+        ctx.lineTo(40, 198);
+        ctx.lineTo(190, 78);
+        ctx.lineTo(10, 78);
+        ctx.lineTo(160, 198);
+        ctx.fill();
+
+        function updateFilter(color) {
+            const [r, g, b, a = 1] = color.match(/\w\w/g).map((x) => parseInt(x, 16) / 255);
+
+            // Update filter values
+            document.getElementById('colorable').children[0].setAttribute('values', `0 0 0 0 ${r}
+                                                                                     0 0 0 0 ${g}
+                                                                                     0 0 0 0 ${b}
+                                                                                     0 0 0 ${a} 0`);
+        }
+    </script>
+</body>
+
+</html>
