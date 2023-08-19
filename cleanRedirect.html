@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirecting...</title>
+</head>
+
+<body>
+    If you are not redirected automatically, follow this <a id="link" href="#">link</a>.
+    <script>
+        (() => {
+            const searchParams = new URLSearchParams(window.location.search);
+            const url = searchParams.get('url');
+
+            if (!url) {
+                document.body.replaceChildren('No URL provided.');
+                return;
+            }
+
+            const urlObj = new URL(url);
+            urlObj.hash = '';
+            const cleanUrl = urlObj.toString();
+
+            document.getElementById('link').href = cleanUrl;
+            window.location.replace(cleanUrl);
+        })();
+    </script>
+</body>
+
+</html>
