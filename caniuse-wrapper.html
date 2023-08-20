@@ -23,30 +23,32 @@
 </head>
 
 <body>
-    <div id="text" class="hidden">If you are not redirected automatically, follow this <a id="link" href="#">link</a>.</div>
+    <div id="text" class="hidden">If you are not redirected automatically, follow this <a id="link" href="#">link</a>.
+    </div>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
-        (() => {
-            const CAN_I_USE_URL = 'https://caniuse.com/';
+        const CAN_I_USE_URL = 'https://caniuse.com/';
 
-            let cleanUrl;
-            if (Telegram.WebApp.initData.start_param) {
+        function retrieveCleanUrl() {
+            if (Telegram.WebApp.initDataUnsafe.start_param) {
                 const base = new URL(CAN_I_USE_URL);
-                base.pathname = Telegram.WebApp.initData.start_param;
-                cleanUrl = base.toString();
+                base.pathname = Telegram.WebApp.initDataUnsafe.start_param;
+                return base.toString();
             } else {
                 const searchParams = new URLSearchParams(window.location.search);
                 const url = searchParams.get('url');
 
                 if (!url) {
-                    document.body.replaceChildren('No URL provided.');
-                    return;
+                    return CAN_I_USE_URL;
                 }
 
                 const urlObj = new URL(url);
                 urlObj.hash = '';
-                const cleanUrl = urlObj.toString();
+                return urlObj.toString();
             }
+        }
+        (() => {
+            const cleanUrl = retrieveCleanUrl();
 
             document.getElementById('link').href = cleanUrl;
             setTimeout(() => {
