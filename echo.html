@@ -12,7 +12,7 @@
         window.addEventListener('message', (e) => {
             if (!e.origin) return;
             log.textContent += '\nMessage received from: ' + e.origin + ' - ' + e.data;
-            window.postMessage('Hello ' + e.data + '!', e.origin);
+            window.postMessage('Echo ' + e.data + '!', '*');
         });
     </script>
 </body>
