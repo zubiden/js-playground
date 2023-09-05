@@ -12,7 +12,7 @@
         window.addEventListener('message', (e) => {
             if (window.location.href.includes(e.origin)) return;
             log.textContent += '\nMessage received from: ' + e.origin + ' - ' + e.data;
-            window.postMessage('Echo ' + e.data + '!', '*');
+            window.parent.postMessage('Echo ' + e.data + '!', '*');
         });
     </script>
 </body>
