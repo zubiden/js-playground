@@ -10,7 +10,7 @@
     <script>
         const log = document.getElementById('log');
         window.addEventListener('message', (e) => {
-            if (!e.origin) return;
+            if (window.location.href.includes(e.origin)) return;
             log.textContent += '\nMessage received from: ' + e.origin + ' - ' + e.data;
             window.postMessage('Echo ' + e.data + '!', '*');
         });
