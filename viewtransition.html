@@ -5,9 +5,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="origin-trial"
-        content="AogYkfsnYRkScjyVDt6j2tuvwUnapGv18/uEK3pUE2T3716Tx8c7rCj2fy0Zn0xmFlqw8Y7SfaoKEF8iWwv2fQIAAABfeyJvcmlnaW4iOiJodHRwczovL3p1YmlkZW4uZ2l0aHViLmlvOjQ0MyIsImZlYXR1cmUiOiJEb2N1bWVudFRyYW5zaXRpb25WMiIsImV4cGlyeSI6MTY2NjEzNzU5OX0=">
-    <title>Shared Element Transitions test</title>
+    <title>View Transitions test</title>
     <style>
         body {
             margin: 0;
@@ -131,39 +129,39 @@
         }
 
         /* Disable default global transition */
-        ::page-transition-outgoing-image(root) {
+        ::view-transition-old(root) {
             opacity: 0;
             animation: none;
         }
 
-        ::page-transition-incoming-image(root) {
+        ::view-transition-new(root) {
             opacity: 1;
             animation: none;
         }
 
-        ::page-transition-outgoing-image(video) {
+        ::view-transition-old(video) {
             opacity: 1;
         }
 
-        ::page-transition-incoming-image(video) {
+        ::view-transition-new(video) {
             animation: none;
             opacity: 1;
         }
 
-        ::page-transition-outgoing-image(message) {
+        ::view-transition-old(message) {
             opacity: 1;
         }
 
-        ::page-transition-incoming-image(message) {
+        ::view-transition-new(message) {
             animation: none;
             opacity: 1;
         }
 
-        ::page-transition-outgoing-image(preview) {
+        ::view-transition-old(preview) {
             opacity: 1;
         }
 
-        ::page-transition-incoming-image(preview) {
+        ::view-transition-new(preview) {
             animation: none;
             opacity: 1;
         }
@@ -201,40 +199,40 @@
         const theme = document.getElementById('theme');
 
         theme.addEventListener('click', async () => {
-            if (document.createDocumentTransition) {
-                const transition = document.createDocumentTransition();
-                document.body.style.pageTransitionTag = 'body';
-                await transition.start(() => {
+            if (document.startViewTransition) {
+                document.body.style.viewTransitionName = 'body';
+                const transition = document.startViewTransition(() => {
                     toggleTheme();
                 });
-                document.body.style.pageTransitionTag = '';
+                await transition.finished;
+                document.body.style.viewTransitionName = '';
             } else {
                 toggleTheme();
             }
         });
 
         send.addEventListener('click', async () => {
-            if (document.createDocumentTransition) {
+            if (!input.value) return;
+            if (document.startViewTransition) {
                 prepareMessageAnimation();
-                const transition = document.createDocumentTransition();
-
-                await transition.start(() => {
+                const transition = document.startViewTransition(() => {
                     sendMessage();
                 });
-                document.querySelectorAll('.message').forEach(message => message.style.pageTransitionTag = '');
+
+                await transition.finished;
+                document.querySelectorAll('.message').forEach(message => message.style.viewTransitionName = '');
             } else {
                 sendMessage();
             }
         });
 
         video.addEventListener('click', async () => {
-            if (document.createDocumentTransition) {
-                video.style.pageTransitionTag = 'video';
-                const transition = document.createDocumentTransition();
-
-                await transition.start(() => {
+            if (document.startViewTransition) {
+                video.style.viewTransitionName = 'video';
+                const transition = document.startViewTransition(() => {
                     sendVideo();
                 });
+                await transition.finished;
                 document.querySelectorAll('video').forEach(video => video.setAttribute('style', ''));
             } else {
                 sendVideo();
@@ -247,26 +245,26 @@
         }
 
         function sendVideo() {
-            video.style.pageTransitionTag = '';
+            video.style.viewTransitionName = '';
             const message = document.createElement('div');
             message.classList.add('message');
             message.classList.add('sticker');
             message.innerHTML = `<video
                 src="./assets/sticker.webm"
-                style="page-transition-tag: video; contain: paint; width: 64px; height: 64px;"
+                style="view-transition-name: video; contain: paint; width: 64px; height: 64px;"
                 autoplay
                 muted
                 loop></video>`;
             messages.appendChild(message);
 
             message.querySelector('video').addEventListener('click', async (event) => {
-                if (document.createDocumentTransition) {
-                    event.target.style.pageTransitionTag = 'preview';
-                    const transition = document.createDocumentTransition();
-
-                    await transition.start(() => {
+                if (document.startViewTransition) {
+                    event.target.style.viewTransitionName = 'preview';
+                    const transition = document.startViewTransition(() => {
                         openStickerPreview(event.target);
                     });
+
+                    await transition.finished;
                 } else {
                     openStickerPreview(event.target);
                 }
@@ -277,7 +275,7 @@
         function openStickerPreview(video) {
             const videoClone = video.cloneNode();
             // Hide original video
-            video.style.pageTransitionTag = '';
+            video.style.viewTransitionName = '';
             video.style.visibility = 'hidden';
             
             videoClone.style.width = '';
@@ -285,22 +283,21 @@
 
             const dialog = document.createElement('dialog');
             dialog.classList.add('sticker-preview');
-            videoClone.style.pageTransitionTag = 'preview';
+            videoClone.style.viewTransitionName = 'preview';
             dialog.appendChild(videoClone);
             document.body.appendChild(dialog);
 
             dialog.showModal();
 
             dialog.addEventListener('click', async () => {
-                if (document.createDocumentTransition) {
-                    const transition = document.createDocumentTransition();
-
-                    await transition.start(() => {
-                        video.style.pageTransitionTag = 'preview';
+                if (document.startViewTransition) {
+                    const transition = document.startViewTransition(() => {
+                        video.style.viewTransitionName = 'preview';
                         video.style.visibility = 'visible';
                         dialog.close();
                     });
-                    video.style.pageTransitionTag = '';
+                    await transition.finished;
+                    video.style.viewTransitionName = '';
                 } else {
                     dialog.close();
                     video.style.visibility = 'visible';
@@ -311,8 +308,24 @@
             }, { once: true });
         }
 
+        async function animateMessageEdit(event) {
+            const message = event.currentTarget;
+            message.style.viewTransitionName = 'messageEdit';
+
+            const randomMessage = Array.from({ length: Math.floor(Math.random() * 8) + 1 }, () => Math.random().toString(36).substring(2)).join('<br>');
+            if (document.startViewTransition) {
+                const transition = document.startViewTransition(() => {
+                    message.innerHTML = randomMessage;
+                });
+                await transition.finished;
+            } else {
+                message.innerHTML = randomMessage;
+            }
+            message.style.viewTransitionName = '';
+        }
+
         function prepareMessageAnimation() {
-            document.querySelectorAll('.message').forEach(message => message.style.pageTransitionTag = '');
+            document.querySelectorAll('.message').forEach(message => message.style.viewTransitionName = '');
             const message = document.createElement('div');
             message.classList.add('message');
             message.innerText = input.value;
@@ -324,7 +337,7 @@
             message.style.top = `${rect.top}px`;
             message.style.width = `${textSize.width}px`;
             message.style.height = `${textSize.height}px`;
-            message.style.pageTransitionTag = 'message';
+            message.style.viewTransitionName = 'message';
             document.body.appendChild(message);
         }
 
@@ -333,7 +346,8 @@
             const message = document.createElement('div');
             message.classList.add('message');
             message.innerText = input.value;
-            message.style.pageTransitionTag = 'message';
+            message.style.viewTransitionName = 'message';
+            message.addEventListener('click', animateMessageEdit);
             messages.appendChild(message);
             input.value = '';
         }
