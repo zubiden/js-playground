@@ -110,6 +110,7 @@
             color: var(--serviceColor);
             padding: 0.5rem;
             border-radius: 0.5rem;
+            view-transition-name: service;
         }
 
         .message {
@@ -211,20 +212,27 @@
             }
         });
 
-        send.addEventListener('click', async () => {
+        send.addEventListener('click', handleSend);
+        input.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey) {
+                handleSend();
+            }
+        });
+
+        async function handleSend() {
             if (!input.value) return;
+            const randomId = Math.random().toString(36).substring(2);
             if (document.startViewTransition) {
-                prepareMessageAnimation();
+                prepareMessageAnimation(randomId);
                 const transition = document.startViewTransition(() => {
-                    sendMessage();
+                    sendMessage(randomId);
                 });
 
                 await transition.finished;
-                document.querySelectorAll('.message').forEach(message => message.style.viewTransitionName = '');
             } else {
                 sendMessage();
             }
-        });
+        }
 
         video.addEventListener('click', async () => {
             if (document.startViewTransition) {
@@ -310,7 +318,6 @@
 
         async function animateMessageEdit(event) {
             const message = event.currentTarget;
-            message.style.viewTransitionName = 'messageEdit';
 
             const randomMessage = Array.from({ length: Math.floor(Math.random() * 8) + 1 }, () => Math.random().toString(36).substring(2)).join('<br>');
             if (document.startViewTransition) {
@@ -321,11 +328,9 @@
             } else {
                 message.innerHTML = randomMessage;
             }
-            message.style.viewTransitionName = '';
         }
 
-        function prepareMessageAnimation() {
-            document.querySelectorAll('.message').forEach(message => message.style.viewTransitionName = '');
+        function prepareMessageAnimation(id) {
             const message = document.createElement('div');
             message.classList.add('message');
             message.innerText = input.value;
@@ -337,16 +342,16 @@
             message.style.top = `${rect.top}px`;
             message.style.width = `${textSize.width}px`;
             message.style.height = `${textSize.height}px`;
-            message.style.viewTransitionName = 'message';
+            message.style.viewTransitionName = `message-${id}`;
             document.body.appendChild(message);
         }
 
-        function sendMessage() {
+        function sendMessage(id) {
             document.getElementById('ghost')?.remove();
             const message = document.createElement('div');
             message.classList.add('message');
             message.innerText = input.value;
-            message.style.viewTransitionName = 'message';
+            message.style.viewTransitionName = `message-${id}`;
             message.addEventListener('click', animateMessageEdit);
             messages.appendChild(message);
             input.value = '';
