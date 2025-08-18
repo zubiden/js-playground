@@ -14,8 +14,8 @@
     <div id="info"></div>
     <div id="container"></div>
     <script>
-        const VIDEO_COUNT = 20;
-        const VIDEO_URL = './assets/test.webm';
+        const VIDEO_COUNT = 100;
+        const VIDEO_URL = new URLSearchParams(window.location.search).get('video') || './assets/test.webm';
 
         const container = document.getElementById('container');
         const trigger = document.getElementById('trigger');
@@ -24,10 +24,11 @@
 
         let lastFrameTime = performance.now();
         let maxFrameTime = 0;
+        window.globalVideoArray = [];
 
         trigger.addEventListener('click', () => {
             maxFrameTime = 0;
-            info.textContent = '';
+            info.innerHTML = '';
 
             if (container.children.length) {
                 while (container.firstChild) {
@@ -36,17 +37,25 @@
                 return;
             }
 
-            for (let i = 0; i < VIDEO_COUNT; i++) {
+            for (let i = 0; i < VIDEO_COUNT + 1; i++) {
                 const video = document.createElement('video');
                 video.src = VIDEO_URL;
                 video.autoplay = true;
                 video.loop = true;
                 video.muted = true;
+                
+                video.addEventListener('loadstart', function() {
+                    console.log('Video loading started');
+                });
+                
+                window.globalVideoArray.push(video);
                 container.appendChild(video);
             }
         });
 
         let frame = 0;
+        let animationId;
+        
         function draw() {
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = 'black';
@@ -54,19 +63,40 @@
             ctx.fillStyle = 'white';
             ctx.font = '20px Arial';
             ctx.fillText(frame, 10, 20);
-            frame = (frame + 1) % 100;
+            frame = (frame + 1) % 101;
 
             const now = performance.now();
             const frameTime = now - lastFrameTime;
             lastFrameTime = now;
+            
             if (frameTime > maxFrameTime) {
                 maxFrameTime = frameTime;
-                info.textContent = `Max frame time: ${maxFrameTime.toFixed(2)}ms`;
+                info.innerHTML = `Max frame time: ${maxFrameTime.toFixed(2)}ms`;
             }
 
             requestAnimationFrame(draw);
         }
+        
         draw();
+        
+        function createInterval() {
+            setInterval(() => {
+                console.log('Logging...');
+            }, 1000);
+        }
+        createInterval();
+        
+        function handleResize() {
+            const start = Date.now();
+            while (Date.now() - start < 100) {
+            }
+        }
+        
+        window.addEventListener('resize', handleResize);
+        
+        document.getElementById('composer').addEventListener('click', () => {
+            console.log('Element clicked');
+        });
     </script>
 </body>
 
