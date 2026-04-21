@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Telegram Mini App Demo</title>
+  <script src="https://telegram.org/js/telegram-web-app.js?62"></script>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --panel: rgba(15, 23, 42, 0.82);
+      --line: rgba(148, 163, 184, 0.24);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --primary: #38bdf8;
+      --primary-hover: #0ea5e9;
+      --accent: #22c55e;
+      --accent-hover: #16a34a;
+      --danger: #f97316;
+      --danger-hover: #ea580c;
+      --shadow: 0 1.25rem 3rem rgba(15, 23, 42, 0.34);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 1.5rem;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at top, rgba(56, 189, 248, 0.22), transparent 30%),
+        linear-gradient(180deg, #020617 0%, #0f172a 100%);
+      color: var(--text);
+    }
+
+    .app {
+      width: min(100%, 34rem);
+      padding: 1.5rem;
+      border: 1px solid var(--line);
+      border-radius: 1.5rem;
+      background: var(--panel);
+      backdrop-filter: blur(1rem);
+      box-shadow: var(--shadow);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.6rem;
+      line-height: 1.2;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .stack {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .meta {
+      padding: 0.9rem 1rem;
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      background: rgba(15, 23, 42, 0.42);
+      font-size: 0.95rem;
+    }
+
+    .meta strong {
+      color: var(--text);
+    }
+
+    .actions {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    button {
+      width: 100%;
+      border: 0;
+      border-radius: 0.95rem;
+      padding: 0.95rem 1rem;
+      font: inherit;
+      font-weight: 700;
+      color: #020617;
+      background: var(--primary);
+      cursor: pointer;
+      transition: transform 160ms ease, background-color 160ms ease;
+    }
+
+    button:hover {
+      background: var(--primary-hover);
+    }
+
+    button:active {
+      transform: translateY(0.0625rem);
+    }
+
+    button.accent {
+      background: var(--accent);
+    }
+
+    button.accent:hover {
+      background: var(--accent-hover);
+    }
+
+    button.secondary {
+      background: var(--danger);
+    }
+
+    button.secondary:hover {
+      background: var(--danger-hover);
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    pre {
+      margin: 0;
+      min-height: 12rem;
+      padding: 1rem;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      background: rgba(2, 6, 23, 0.7);
+      color: #bfdbfe;
+      font-size: 0.85rem;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    code {
+      color: #7dd3fc;
+    }
+  </style>
+</head>
+<body>
+  <main class="app stack">
+    <div class="stack">
+      <h1>Telegram Mini App Demo</h1>
+      <p>Separate controls for <code>CloudStorage</code>, <code>DeviceStorage</code>, <code>SecureStorage</code>, and <code>BiometricManager</code>, plus a tolerant <code>Clear All</code> action and redirect.</p>
+    </div>
+
+    <section class="meta stack" aria-live="polite">
+      <div><strong>Platform:</strong> <span id="platform">checking...</span></div>
+      <div><strong>Bot API version:</strong> <span id="version">checking...</span></div>
+      <div><strong>Cloud storage:</strong> <span id="cloud-storage-status">checking...</span></div>
+      <div><strong>Device storage:</strong> <span id="device-storage-status">checking...</span></div>
+      <div><strong>Secure storage:</strong> <span id="secure-storage-status">checking...</span></div>
+      <div><strong>Biometrics:</strong> <span id="biometric-status">checking...</span></div>
+    </section>
+
+    <section class="actions">
+      <button id="cloud-button" type="button">Checking CloudStorage...</button>
+      <button id="device-button" type="button">Checking DeviceStorage...</button>
+      <button id="secure-button" type="button">Checking SecureStorage...</button>
+      <button id="biometric-button" type="button">Checking biometric storage...</button>
+      <button id="clear-all-button" type="button" class="accent">Clear all demo data</button>
+      <button id="redirect-button" type="button" class="secondary">Redirect</button>
+    </section>
+
+    <pre id="log" aria-live="polite"></pre>
+  </main>
+
+  <script>
+    const REDIRECT_URL = 'https://zubiden.dev/demo/extractor.html';
+    const CLOUD_STORAGE_KEY = 'demo-cloud-storage';
+    const DEVICE_STORAGE_KEY = 'demo-storage';
+    const SECURE_STORAGE_KEY = 'demo-secure-storage';
+    const STORAGE_VALUE = 'My very secret mini app data';
+    const BIOMETRIC_TOKEN = 'demo-biometric-token';
+    const BIOMETRIC_TIMEOUT_MS = 8000;
+
+    const platformNode = document.getElementById('platform');
+    const versionNode = document.getElementById('version');
+    const cloudStorageStatusNode = document.getElementById('cloud-storage-status');
+    const deviceStorageStatusNode = document.getElementById('device-storage-status');
+    const secureStorageStatusNode = document.getElementById('secure-storage-status');
+    const biometricStatusNode = document.getElementById('biometric-status');
+    const logNode = document.getElementById('log');
+    const cloudButton = document.getElementById('cloud-button');
+    const deviceButton = document.getElementById('device-button');
+    const secureButton = document.getElementById('secure-button');
+    const biometricButton = document.getElementById('biometric-button');
+    const clearAllButton = document.getElementById('clear-all-button');
+    const redirectButton = document.getElementById('redirect-button');
+
+    const webApp = window.Telegram && window.Telegram.WebApp;
+    const cloudStorage = webApp && webApp.CloudStorage;
+    const deviceStorage = webApp && webApp.DeviceStorage;
+    const secureStorage = webApp && webApp.SecureStorage;
+    const biometricManager = webApp && webApp.BiometricManager;
+
+    const supportState = {
+      cloud: cloudStorage ? 'unknown' : 'unsupported',
+      device: deviceStorage ? 'unknown' : 'unsupported',
+      secure: secureStorage ? 'unknown' : 'unsupported',
+      biometric: biometricManager ? 'unknown' : 'unsupported',
+    };
+
+    const valueState = {
+      cloud: false,
+      device: false,
+      secure: false,
+      biometric: false,
+      biometricChecked: false,
+      biometricAvailable: false,
+      biometricAccessRequested: false,
+      biometricAccessGranted: false,
+    };
+
+    const uiState = {
+      activeAction: '',
+    };
+
+    function setLog(message) {
+      const timestamp = new Date().toLocaleTimeString();
+      logNode.textContent = '[' + timestamp + '] ' + message + '\n\n' + logNode.textContent;
+    }
+
+    function getErrorMessage(error) {
+      return error instanceof Error ? error.message : String(error);
+    }
+
+    function isUnsupportedError(message) {
+      return String(message).toUpperCase().includes('UNSUPPORTED');
+    }
+
+    function isBusy() {
+      return Boolean(uiState.activeAction);
+    }
+
+    function hasAnySupportedStorage() {
+      const isCloudSupported = Boolean(cloudStorage) && supportState.cloud !== 'unsupported';
+      const isDeviceSupported = Boolean(deviceStorage) && supportState.device !== 'unsupported';
+      const isSecureSupported = Boolean(secureStorage) && supportState.secure !== 'unsupported';
+      const isBiometricSupported = Boolean(biometricManager) && supportState.biometric !== 'unsupported';
+
+      return isCloudSupported || isDeviceSupported || isSecureSupported || isBiometricSupported;
+    }
+
+    function renderButtons() {
+      const isWebAppUnavailable = !webApp;
+      const isUiBusy = isBusy();
+      const isBiometricUnavailable = valueState.biometricChecked && !valueState.biometricAvailable;
+
+      if (isWebAppUnavailable) {
+        cloudButton.textContent = 'CloudStorage unavailable outside Telegram';
+        deviceButton.textContent = 'DeviceStorage unavailable outside Telegram';
+        secureButton.textContent = 'SecureStorage unavailable outside Telegram';
+        biometricButton.textContent = 'Biometric storage unavailable outside Telegram';
+      } else {
+        cloudButton.textContent = supportState.cloud === 'unsupported'
+          ? 'CloudStorage unsupported'
+          : (valueState.cloud ? 'Clear CloudStorage key' : 'Write CloudStorage key');
+
+        deviceButton.textContent = supportState.device === 'unsupported'
+          ? 'DeviceStorage unsupported'
+          : (valueState.device ? 'Clear DeviceStorage key' : 'Write DeviceStorage key');
+
+        secureButton.textContent = supportState.secure === 'unsupported'
+          ? 'SecureStorage unsupported'
+          : (valueState.secure ? 'Clear SecureStorage key' : 'Write SecureStorage key');
+
+        if (supportState.biometric === 'unsupported') {
+          biometricButton.textContent = 'Biometric storage unsupported';
+        } else if (!valueState.biometricChecked) {
+          biometricButton.textContent = 'Check biometric storage';
+        } else if (isBiometricUnavailable) {
+          biometricButton.textContent = 'Biometrics unavailable';
+        } else if (valueState.biometric) {
+          biometricButton.textContent = 'Clear biometric token';
+        } else if (!valueState.biometricAccessGranted) {
+          biometricButton.textContent = valueState.biometricAccessRequested
+            ? 'Open biometric settings'
+            : 'Request biometric access';
+        } else {
+          biometricButton.textContent = 'Save biometric token';
+        }
+      }
+
+      cloudButton.disabled = isWebAppUnavailable
+        || isUiBusy
+        || supportState.cloud === 'unsupported';
+
+      deviceButton.disabled = isWebAppUnavailable
+        || isUiBusy
+        || supportState.device === 'unsupported';
+
+      secureButton.disabled = isWebAppUnavailable
+        || isUiBusy
+        || supportState.secure === 'unsupported';
+
+      biometricButton.disabled = isWebAppUnavailable
+        || isUiBusy
+        || supportState.biometric === 'unsupported'
+        || isBiometricUnavailable;
+
+      clearAllButton.disabled = isWebAppUnavailable
+        || isUiBusy
+        || !hasAnySupportedStorage();
+
+      redirectButton.disabled = isUiBusy;
+    }
+
+    function setActiveAction(action) {
+      uiState.activeAction = action;
+      renderButtons();
+    }
+
+    function setPlatformInfo() {
+      if (!webApp) {
+        platformNode.textContent = 'Telegram WebApp API unavailable';
+        versionNode.textContent = 'not detected';
+        return;
+      }
+
+      platformNode.textContent = webApp.platform || 'unknown';
+      versionNode.textContent = webApp.version || 'unknown';
+    }
+
+    function runFeature(feature, action) {
+      return action()
+        .then((result) => {
+          if (supportState[feature] !== 'unsupported') {
+            supportState[feature] = 'supported';
+          }
+
+          return { ok: true, result };
+        })
+        .catch((error) => {
+          const message = getErrorMessage(error);
+
+          if (isUnsupportedError(message)) {
+            supportState[feature] = 'unsupported';
+            return { ok: false, unsupported: true, error: message };
+          }
+
+          return { ok: false, error: message };
+        });
+    }
+
+    function getCloudItem(key) {
+      return new Promise((resolve, reject) => {
+        if (!cloudStorage) {
+          resolve(undefined);
+          return;
+        }
+
+        cloudStorage.getItem(key, (error, value) => {
+          if (error) {
+            reject(new Error(String(error)));
+            return;
+          }
+
+          resolve(value);
+        });
+      });
+    }
+
+    function setCloudItem(key, value) {
+      return new Promise((resolve, reject) => {
+        if (!cloudStorage) {
+          resolve(false);
+          return;
+        }
+
+        cloudStorage.setItem(key, value, (error, stored) => {
+          if (error) {
+            reject(new Error(String(error)));
+            return;
+          }
+
+          resolve(Boolean(stored));
+        });
+      });
+    }
+
+    function removeCloudItem(key) {
+      return new Promise((resolve, reject) => {
+        if (!cloudStorage) {
+          resolve(false);
+          return;
+        }
+
+        cloudStorage.removeItem(key, (error, removed) => {
+          if (error) {
+            reject(new Error(String(error)));
+            return;
+          }
+
+          resolve(Boolean(removed));
+        });
+      });
+    }
+
+    function getDeviceItem(key) {
+      return new Promise((resolve, reject) => {
+        if (!deviceStorage) {
+          resolve(undefined);
+          return;
+        }
+
+        deviceStorage.getItem(key, (error, value) => {
+          if (error) {
+            reject(new Error(String(error)));
+            return;
+          }
+
+          resolve(value);
+        });
+      });
+    }
+
+    function setDeviceItem(key, value) {
+      return new Promise((resolve, reject) => {
+        if (!deviceStorage) {
+          resolve(false);
+          return;
+        }
+
+        deviceStorage.setItem(key, value, (error, stored) => {
+          if (error) {
+            reject(new Error(String(error)));
+            return;
+          }
+
+          resolve(Boolean(stored));
+        });
+      });
+    }
+
+    function removeDeviceItem(key) {
+      return new Promise((resolve, reject) => {
+        if (!deviceStorage) {
+          resolve(false);
+          return;
+        }
+
+        deviceStorage.removeItem(key, (error, removed) => {
+          if (error) {
+            reject(new Error(String(error)));
+            return;
+          }
+
+          resolve(Boolean(removed));
+        });
+      });
+    }
+
+    function clearDeviceStorage() {
+      return new Promise((resolve, reject) => {
+        if (!deviceStorage) {
+          resolve(false);
+          return;
+        }
+
+        deviceStorage.clear((error, cleared) => {
+          if (error) {
+            reject(new Error(String(error)));
+            return;
+          }
+
+          resolve(Boolean(cleared));
+        });
+      });
+    }
+
+    function getSecureItem(key) {
+      return new Promise((resolve, reject) => {
+        if (!secureStorage) {
+          resolve(undefined);
+          return;
+        }
+
+        secureStorage.getItem(key, (error, value) => {
+          if (error) {
+            reject(new Error(String(error)));
+            return;
+          }
+
+          resolve(value);
+        });
+      });
+    }
+
+    function setSecureItem(key, value) {
+      return new Promise((resolve, reject) => {
+        if (!secureStorage) {
+          resolve(false);
+          return;
+        }
+
+        secureStorage.setItem(key, value, (error, stored) => {
+          if (error) {
+            reject(new Error(String(error)));
+            return;
+          }
+
+          resolve(Boolean(stored));
+        });
+      });
+    }
+
+    function removeSecureItem(key) {
+      return new Promise((resolve, reject) => {
+        if (!secureStorage) {
+          resolve(false);
+          return;
+        }
+
+        secureStorage.removeItem(key, (error, removed) => {
+          if (error) {
+            reject(new Error(String(error)));
+            return;
+          }
+
+          resolve(Boolean(removed));
+        });
+      });
+    }
+
+    function clearSecureStorage() {
+      return new Promise((resolve, reject) => {
+        if (!secureStorage) {
+          resolve(false);
+          return;
+        }
+
+        secureStorage.clear((error, cleared) => {
+          if (error) {
+            reject(new Error(String(error)));
+            return;
+          }
+
+          resolve(Boolean(cleared));
+        });
+      });
+    }
+
+    function runTimedBiometricCallback(label, executor, timeoutMs) {
+      return new Promise((resolve, reject) => {
+        let isSettled = false;
+        const timeoutId = window.setTimeout(() => {
+          if (isSettled) {
+            return;
+          }
+
+          isSettled = true;
+          reject(new Error(label + ' timed out after ' + timeoutMs + 'ms'));
+        }, timeoutMs);
+
+        function clearAndResolve(value) {
+          if (isSettled) {
+            return;
+          }
+
+          isSettled = true;
+          window.clearTimeout(timeoutId);
+          resolve(value);
+        }
+
+        function clearAndReject(error) {
+          if (isSettled) {
+            return;
+          }
+
+          isSettled = true;
+          window.clearTimeout(timeoutId);
+          reject(error);
+        }
+
+        try {
+          executor(clearAndResolve, clearAndReject);
+        } catch (error) {
+          clearAndReject(error);
+        }
+      });
+    }
+
+    function initBiometrics() {
+      if (!biometricManager) {
+        return Promise.resolve(false);
+      }
+
+      return runTimedBiometricCallback('Biometric initialization', (resolve) => {
+        biometricManager.init(() => resolve(true));
+      }, BIOMETRIC_TIMEOUT_MS);
+    }
+
+    function requestBiometricAccess() {
+      return runTimedBiometricCallback('Biometric access request', (resolve) => {
+        biometricManager.requestAccess(
+          { reason: 'Allow this demo Mini App to use biometrics for the saved token.' },
+          (isGranted) => resolve(Boolean(isGranted)),
+        );
+      }, BIOMETRIC_TIMEOUT_MS);
+    }
+
+    function openBiometricSettings() {
+      return new Promise((resolve, reject) => {
+        try {
+          biometricManager.openSettings();
+          resolve(true);
+        } catch (error) {
+          reject(error);
+        }
+      });
+    }
+
+    function updateBiometricToken(token) {
+      if (!biometricManager) {
+        return Promise.resolve(false);
+      }
+
+      return runTimedBiometricCallback('Biometric token update', (resolve) => {
+        biometricManager.updateBiometricToken(token, (isUpdated) => {
+          resolve(Boolean(isUpdated));
+        });
+      }, BIOMETRIC_TIMEOUT_MS);
+    }
+
+    async function syncCloudState(shouldLogError) {
+      if (!cloudStorage) {
+        supportState.cloud = 'unsupported';
+        valueState.cloud = false;
+        cloudStorageStatusNode.textContent = 'not supported in this environment';
+        renderButtons();
+        return;
+      }
+
+      const response = await runFeature('cloud', () => getCloudItem(CLOUD_STORAGE_KEY));
+
+      if (response.ok) {
+        valueState.cloud = response.result === STORAGE_VALUE;
+        cloudStorageStatusNode.textContent = valueState.cloud ? 'demo value saved' : 'empty';
+      } else if (response.unsupported) {
+        valueState.cloud = false;
+        cloudStorageStatusNode.textContent = 'unsupported in this Telegram client';
+      } else {
+        valueState.cloud = false;
+        cloudStorageStatusNode.textContent = 'error reading storage';
+        if (shouldLogError) {
+          setLog('CloudStorage read failed: ' + response.error);
+        }
+      }
+
+      renderButtons();
+    }
+
+    async function syncDeviceState(shouldLogError) {
+      if (!deviceStorage) {
+        supportState.device = 'unsupported';
+        valueState.device = false;
+        deviceStorageStatusNode.textContent = 'not supported in this environment';
+        renderButtons();
+        return;
+      }
+
+      const response = await runFeature('device', () => getDeviceItem(DEVICE_STORAGE_KEY));
+
+      if (response.ok) {
+        valueState.device = response.result === STORAGE_VALUE;
+        deviceStorageStatusNode.textContent = valueState.device ? 'demo value saved' : 'empty';
+      } else if (response.unsupported) {
+        valueState.device = false;
+        deviceStorageStatusNode.textContent = 'unsupported in this Telegram client';
+      } else {
+        valueState.device = false;
+        deviceStorageStatusNode.textContent = 'error reading storage';
+        if (shouldLogError) {
+          setLog('DeviceStorage read failed: ' + response.error);
+        }
+      }
+
+      renderButtons();
+    }
+
+    async function syncSecureState(shouldLogError) {
+      if (!secureStorage) {
+        supportState.secure = 'unsupported';
+        valueState.secure = false;
+        secureStorageStatusNode.textContent = 'not supported in this environment';
+        renderButtons();
+        return;
+      }
+
+      const response = await runFeature('secure', () => getSecureItem(SECURE_STORAGE_KEY));
+
+      if (response.ok) {
+        valueState.secure = response.result === STORAGE_VALUE;
+        secureStorageStatusNode.textContent = valueState.secure ? 'demo value saved' : 'empty';
+      } else if (response.unsupported) {
+        valueState.secure = false;
+        secureStorageStatusNode.textContent = 'unsupported in this Telegram client';
+      } else {
+        valueState.secure = false;
+        secureStorageStatusNode.textContent = 'error reading storage';
+        if (shouldLogError) {
+          setLog('SecureStorage read failed: ' + response.error);
+        }
+      }
+
+      renderButtons();
+    }
+
+    function applyBiometricManagerState() {
+      if (!biometricManager) {
+        return;
+      }
+
+      valueState.biometricInited = Boolean(biometricManager.isInited);
+      valueState.biometricChecked = Boolean(biometricManager.isInited);
+      valueState.biometricAvailable = Boolean(biometricManager.isBiometricAvailable);
+      valueState.biometricAccessRequested = Boolean(biometricManager.isAccessRequested);
+      valueState.biometricAccessGranted = Boolean(biometricManager.isAccessGranted);
+      valueState.biometric = Boolean(biometricManager.isBiometricTokenSaved);
+
+      if (!valueState.biometricInited) {
+        biometricStatusNode.textContent = 'initializing...';
+      } else if (!valueState.biometricAvailable) {
+        biometricStatusNode.textContent = 'biometrics unavailable on this device';
+      } else if (valueState.biometric) {
+        biometricStatusNode.textContent = 'demo token saved';
+      } else if (valueState.biometricAccessGranted) {
+        biometricStatusNode.textContent = 'access granted, token not saved';
+      } else if (valueState.biometricAccessRequested) {
+        biometricStatusNode.textContent = 'access denied, open settings to allow it';
+      } else {
+        biometricStatusNode.textContent = 'permission not requested yet';
+      }
+
+      renderButtons();
+    }
+
+    function handleBiometricManagerUpdated() {
+      applyBiometricManagerState();
+      setLog('BiometricManager updated: inited=' + valueState.biometricInited
+        + ', available=' + valueState.biometricAvailable
+        + ', requested=' + valueState.biometricAccessRequested
+        + ', granted=' + valueState.biometricAccessGranted
+        + ', saved=' + valueState.biometric);
+    }
+
+    async function syncBiometricState(shouldLogError) {
+      if (!biometricManager) {
+        supportState.biometric = 'unsupported';
+        valueState.biometric = false;
+        valueState.biometricInited = false;
+        valueState.biometricChecked = true;
+        valueState.biometricAvailable = false;
+        valueState.biometricAccessRequested = false;
+        valueState.biometricAccessGranted = false;
+        biometricStatusNode.textContent = 'not supported in this environment';
+        renderButtons();
+        return;
+      }
+
+      if (biometricManager.isInited) {
+        applyBiometricManagerState();
+        return;
+      }
+
+      const initResponse = await runFeature('biometric', () => initBiometrics());
+
+      if (!initResponse.ok) {
+        valueState.biometric = false;
+        valueState.biometricInited = false;
+        valueState.biometricChecked = true;
+        valueState.biometricAvailable = false;
+        valueState.biometricAccessRequested = false;
+        valueState.biometricAccessGranted = false;
+        biometricStatusNode.textContent = initResponse.unsupported
+          ? 'unsupported in this Telegram client'
+          : 'error initializing biometrics';
+
+        if (shouldLogError && !initResponse.unsupported) {
+          setLog('Biometric initialization failed: ' + initResponse.error);
+        }
+
+        renderButtons();
+        return;
+      }
+
+      applyBiometricManagerState();
+    }
+
+    async function refreshAllState() {
+      await Promise.allSettled([
+        syncCloudState(false),
+        syncDeviceState(false),
+        syncSecureState(false),
+        syncBiometricState(false),
+      ]);
+      renderButtons();
+    }
+
+    async function handleCloudToggle() {
+      if (!webApp) {
+        setLog('Telegram WebApp API is unavailable. Open this file inside Telegram to test Mini App features.');
+        return;
+      }
+
+      setActiveAction('cloud');
+
+      try {
+        const response = valueState.cloud
+          ? await runFeature('cloud', () => removeCloudItem(CLOUD_STORAGE_KEY))
+          : await runFeature('cloud', () => setCloudItem(CLOUD_STORAGE_KEY, STORAGE_VALUE));
+
+        if (response.ok) {
+          setLog('CloudStorage result: ' + response.result);
+        } else if (response.unsupported) {
+          setLog('CloudStorage is unsupported in this Telegram client.');
+        } else {
+          setLog('CloudStorage operation failed: ' + response.error);
+        }
+
+        await syncCloudState(false);
+      } finally {
+        setActiveAction('');
+      }
+    }
+
+    async function handleDeviceToggle() {
+      if (!webApp) {
+        setLog('Telegram WebApp API is unavailable. Open this file inside Telegram to test Mini App features.');
+        return;
+      }
+
+      setActiveAction('device');
+
+      try {
+        const response = valueState.device
+          ? await runFeature('device', () => removeDeviceItem(DEVICE_STORAGE_KEY))
+          : await runFeature('device', () => setDeviceItem(DEVICE_STORAGE_KEY, STORAGE_VALUE));
+
+        if (response.ok) {
+          setLog('DeviceStorage result: ' + response.result);
+        } else if (response.unsupported) {
+          setLog('DeviceStorage is unsupported in this Telegram client.');
+        } else {
+          setLog('DeviceStorage operation failed: ' + response.error);
+        }
+
+        await syncDeviceState(false);
+      } finally {
+        setActiveAction('');
+      }
+    }
+
+    async function handleSecureToggle() {
+      if (!webApp) {
+        setLog('Telegram WebApp API is unavailable. Open this file inside Telegram to test Mini App features.');
+        return;
+      }
+
+      setActiveAction('secure');
+
+      try {
+        const response = valueState.secure
+          ? await runFeature('secure', () => removeSecureItem(SECURE_STORAGE_KEY))
+          : await runFeature('secure', () => setSecureItem(SECURE_STORAGE_KEY, STORAGE_VALUE));
+
+        if (response.ok) {
+          setLog('SecureStorage result: ' + response.result);
+        } else if (response.unsupported) {
+          setLog('SecureStorage is unsupported in this Telegram client.');
+        } else {
+          setLog('SecureStorage operation failed: ' + response.error);
+        }
+
+        await syncSecureState(false);
+      } finally {
+        setActiveAction('');
+      }
+    }
+
+    async function handleBiometricToggle() {
+      if (!webApp) {
+        setLog('Telegram WebApp API is unavailable. Open this file inside Telegram to test Mini App features.');
+        return;
+      }
+
+      if (valueState.biometricChecked && !valueState.biometricAvailable) {
+        setLog('Biometrics are unavailable on this device.');
+        return;
+      }
+
+      setActiveAction('biometric');
+
+      try {
+        await syncBiometricState(false);
+
+        if (supportState.biometric === 'unsupported') {
+          setLog('Biometric storage is unsupported in this Telegram client.');
+          return;
+        }
+
+        if (!valueState.biometricAvailable) {
+          setLog('Biometrics are unavailable on this device.');
+          return;
+        }
+
+        if (!valueState.biometricAccessGranted) {
+          if (!valueState.biometricAccessRequested) {
+            setLog('Biometric access request started. Waiting for Telegram callback...');
+            const accessResponse = await runFeature('biometric', () => requestBiometricAccess());
+
+            if (!accessResponse.ok) {
+              setLog(accessResponse.unsupported
+                ? 'Biometric storage is unsupported in this Telegram client.'
+                : (isTimeoutError(accessResponse.error)
+                  ? 'Biometric access request timed out. The UI is unlocked again. Retry the request or tap again later to open settings.'
+                  : 'Biometric access request failed: ' + accessResponse.error));
+              await syncBiometricState(false);
+              return;
+            }
+
+            setLog('Biometric access callback received: granted=' + accessResponse.result);
+            await syncBiometricState(false);
+
+            if (!accessResponse.result) {
+              setLog('Biometric access was not granted. Click again to open settings if you want to allow it.');
+              return;
+            }
+          } else {
+            setLog('Opening biometric settings...');
+            const settingsResponse = await runFeature('biometric', () => openBiometricSettings());
+
+            if (settingsResponse.ok) {
+              setLog('Opened biometric settings. Allow access there, then tap the button again.');
+            } else if (settingsResponse.unsupported) {
+              setLog('Biometric settings are unsupported in this Telegram client.');
+            } else {
+              setLog('Opening biometric settings failed: ' + settingsResponse.error);
+            }
+
+            return;
+          }
+        }
+
+        setLog((valueState.biometric ? 'Clearing' : 'Saving') + ' biometric token...');
+        const response = valueState.biometric
+          ? await runFeature('biometric', () => updateBiometricToken(''))
+          : await runFeature('biometric', () => updateBiometricToken(BIOMETRIC_TOKEN));
+
+        if (response.ok) {
+          setLog('Biometric storage result: ' + response.result);
+        } else if (response.unsupported) {
+          setLog('Biometric storage is unsupported in this Telegram client.');
+        } else {
+          setLog('Biometric storage operation failed: ' + response.error);
+        }
+
+        await syncBiometricState(false);
+      } finally {
+        setActiveAction('');
+      }
+    }
+
+    async function handleClearAll() {
+      if (!webApp) {
+        setLog('Telegram WebApp API is unavailable. Open this file inside Telegram to test Mini App features.');
+        return;
+      }
+
+      setActiveAction('clearAll');
+
+      try {
+        const results = [];
+
+        if (cloudStorage && supportState.cloud !== 'unsupported') {
+          const cloudResponse = await runFeature('cloud', () => removeCloudItem(CLOUD_STORAGE_KEY));
+          results.push(cloudResponse.ok
+            ? 'CloudStorage=' + cloudResponse.result
+            : (cloudResponse.unsupported ? 'CloudStorage=unsupported' : 'CloudStorage=error:' + cloudResponse.error));
+        } else {
+          results.push('CloudStorage=unsupported');
+        }
+
+        if (deviceStorage && supportState.device !== 'unsupported') {
+          const deviceResponse = await runFeature('device', () => clearDeviceStorage());
+          results.push(deviceResponse.ok
+            ? 'DeviceStorage=' + deviceResponse.result
+            : (deviceResponse.unsupported ? 'DeviceStorage=unsupported' : 'DeviceStorage=error:' + deviceResponse.error));
+        } else {
+          results.push('DeviceStorage=unsupported');
+        }
+
+        if (secureStorage && supportState.secure !== 'unsupported') {
+          const secureResponse = await runFeature('secure', () => clearSecureStorage());
+          results.push(secureResponse.ok
+            ? 'SecureStorage=' + secureResponse.result
+            : (secureResponse.unsupported ? 'SecureStorage=unsupported' : 'SecureStorage=error:' + secureResponse.error));
+        } else {
+          results.push('SecureStorage=unsupported');
+        }
+
+        if (biometricManager && supportState.biometric !== 'unsupported') {
+          const initResponse = await runFeature('biometric', () => initBiometrics());
+
+          if (!initResponse.ok) {
+            results.push(initResponse.unsupported
+              ? 'BiometricToken=unsupported'
+              : 'BiometricToken=error:' + initResponse.error);
+          } else {
+            const biometricResponse = await runFeature('biometric', () => updateBiometricToken(''));
+            results.push(biometricResponse.ok
+              ? 'BiometricToken=' + biometricResponse.result
+              : (biometricResponse.unsupported ? 'BiometricToken=unsupported' : 'BiometricToken=error:' + biometricResponse.error));
+          }
+        } else {
+          results.push('BiometricToken=unsupported');
+        }
+
+        setLog('Clear all result: ' + results.join(', '));
+        await refreshAllState();
+      } finally {
+        setActiveAction('');
+      }
+    }
+
+    function handleRedirect() {
+      setLog('Redirecting to ' + REDIRECT_URL);
+      window.location.replace(REDIRECT_URL);
+    }
+
+    async function init() {
+      setPlatformInfo();
+      renderButtons();
+
+      if (!webApp) {
+        cloudStorageStatusNode.textContent = 'Telegram WebApp API unavailable';
+        deviceStorageStatusNode.textContent = 'Telegram WebApp API unavailable';
+        secureStorageStatusNode.textContent = 'Telegram WebApp API unavailable';
+        biometricStatusNode.textContent = 'Telegram WebApp API unavailable';
+        setLog('Loaded outside Telegram. The UI is ready, but Telegram-only features are disabled.');
+        renderButtons();
+        return;
+      }
+
+      webApp.ready();
+      webApp.expand();
+
+      setLog('Telegram Mini App connected.');
+      await refreshAllState();
+    }
+
+    cloudButton.addEventListener('click', handleCloudToggle);
+    deviceButton.addEventListener('click', handleDeviceToggle);
+    secureButton.addEventListener('click', handleSecureToggle);
+    biometricButton.addEventListener('click', handleBiometricToggle);
+    clearAllButton.addEventListener('click', handleClearAll);
+    redirectButton.addEventListener('click', handleRedirect);
+
+    init().catch((error) => {
+      setLog('Initialization failed: ' + getErrorMessage(error));
+      setActiveAction('');
+    });
+  </script>
+</body>
+</html>
+
+
