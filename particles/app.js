@@ -1,4 +1,5 @@
 const stats = new Stats();
+const gpuPanel = new Stats.Panel("GPU", "#ff8", "#221");
 
 const canvasParent = document.querySelector("#preview");
 const canvas = document.querySelector("canvas.gpu");
@@ -37,9 +38,17 @@ let time = 0;
 let fadeOutTime = 0;
 let frameIndex = 0;
 let lastDrawTime = window.performance.now();
+let submittedGpuFrames = 0;
+let completedGpuFrames = 0;
+let gpuFps = 0;
+let lastGpuSampleFrame = 0;
+let lastGpuSampleTime = window.performance.now();
+const inFlightFrames = [];
 const uniformData = new ArrayBuffer(112);
 const uniformFloats = new Float32Array(uniformData);
 const uniformUints = new Uint32Array(uniformData);
+const gpuSampleInterval = 500;
+const maxFramesInFlight = 2;
 
 const resize = () => {
   const sz =
@@ -137,6 +146,7 @@ const updateDiagnostics = () => {
     textMaskEnabled: GUI.text,
     workgroupSize: 128,
     verticesPerParticle: 4,
+    maxFramesInFlight,
   };
 };
 
@@ -235,6 +245,25 @@ const writeUniforms = (deltaTime, fadeOutT) => {
   device.queue.writeBuffer(uniformBuffer, 0, uniformData);
 };
 
+const trackGpuCompletion = (targetFrame, completion) => {
+  completion
+    .then(() => {
+      const completedAt = window.performance.now();
+      completedGpuFrames = Math.max(completedGpuFrames, targetFrame);
+      const elapsed = completedAt - lastGpuSampleTime;
+
+      if (elapsed >= gpuSampleInterval) {
+        const completedFrames = completedGpuFrames - lastGpuSampleFrame;
+        gpuFps = (completedFrames * 1000) / elapsed;
+        gpuPanel.update(gpuFps, Math.max(60, gpuFps));
+        window.__particleDiagnostics.gpuFps = gpuFps;
+        lastGpuSampleFrame = completedGpuFrames;
+        lastGpuSampleTime = completedAt;
+      }
+    })
+    .catch(() => {});
+};
+
 const loadShader = async (path) => {
   const response = await fetch(path);
   if (!response.ok) {
@@ -330,9 +359,10 @@ const init = async () => {
   });
 
   createParticleResources(GUI.particlesCount);
+  lastGpuSampleTime = window.performance.now();
 };
 
-const loop = () => {
+const loop = async () => {
   if (!running) {
     return;
   }
@@ -389,9 +419,18 @@ const loop = () => {
   renderPass.end();
 
   device.queue.submit([encoder.finish()]);
+  submittedGpuFrames += 1;
+  const completion = device.queue.onSubmittedWorkDone();
+  inFlightFrames.push(completion);
+  trackGpuCompletion(submittedGpuFrames, completion);
   reset = false;
   frameIndex += 1;
   stats.end();
+
+  if (inFlightFrames.length >= maxFramesInFlight) {
+    await inFlightFrames.shift().catch(() => {});
+  }
+
   requestAnimationFrame(loop);
 };
 
@@ -412,8 +451,12 @@ document.querySelector("#tools").appendChild(gui.domElement);
 stats.showPanel(0);
 const perfLi = document.createElement("li");
 perfLi.style.height = "50px";
+perfLi.style.display = "flex";
+perfLi.style.gap = "2px";
 stats.domElement.style.position = "static";
+gpuPanel.dom.title = "GPU queue completion FPS";
 perfLi.appendChild(stats.domElement);
+perfLi.appendChild(gpuPanel.dom);
 perfLi.classList.add("gui-stats");
 gui.__ul.appendChild(perfLi);
 
