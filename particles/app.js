@@ -1,5 +1,7 @@
 const stats = new Stats();
 const gpuPanel = new Stats.Panel("GPU", "#ff8", "#221");
+const jsHeapPanel = new Stats.Panel("JS MB", "#f08", "#201");
+const bufferPanel = new Stats.Panel("BUF KB", "#8ff", "#022");
 
 const canvasParent = document.querySelector("#preview");
 const canvas = document.querySelector("canvas.gpu");
@@ -41,13 +43,16 @@ let lastDrawTime = window.performance.now();
 let submittedGpuFrames = 0;
 let completedGpuFrames = 0;
 let gpuFps = 0;
+let jsHeapBytes = 0;
 let lastGpuSampleFrame = 0;
 let lastGpuSampleTime = window.performance.now();
+let nextMemorySampleTime = 0;
 const inFlightFrames = [];
 const uniformData = new ArrayBuffer(112);
 const uniformFloats = new Float32Array(uniformData);
 const uniformUints = new Uint32Array(uniformData);
 const gpuSampleInterval = 500;
+const memorySampleInterval = 1000;
 const maxFramesInFlight = 2;
 
 const resize = () => {
@@ -147,7 +152,28 @@ const updateDiagnostics = () => {
     workgroupSize: 128,
     verticesPerParticle: 4,
     maxFramesInFlight,
+    gpuFps,
+    jsHeapBytes,
   };
+};
+
+const sampleMemory = (now) => {
+  if (now < nextMemorySampleTime) {
+    return;
+  }
+
+  const memory = window.performance.memory;
+  if (memory && Number.isFinite(memory.usedJSHeapSize)) {
+    jsHeapBytes = memory.usedJSHeapSize;
+    const jsHeapMiB = jsHeapBytes / 1048576;
+    jsHeapPanel.update(jsHeapMiB, Math.max(32, jsHeapMiB * 1.25));
+  }
+
+  const bufferKiB = window.__particleDiagnostics.particleBytes / 1024;
+  const bufferGraphMax = Math.max(256, Math.ceil(bufferKiB / 1024) * 1024);
+  bufferPanel.update(bufferKiB, bufferGraphMax);
+  window.__particleDiagnostics.jsHeapBytes = jsHeapBytes;
+  nextMemorySampleTime = now + memorySampleInterval;
 };
 
 const createParticleResources = (count) => {
@@ -371,6 +397,7 @@ const loop = async () => {
   stats.begin();
 
   const now = window.performance.now();
+  sampleMemory(now);
   const dt = Math.min((now - lastDrawTime) / 1000, 1) * GUI.timeScale;
   lastDrawTime = now;
   time += dt;
@@ -450,13 +477,21 @@ document.querySelector("#tools").appendChild(gui.domElement);
 
 stats.showPanel(0);
 const perfLi = document.createElement("li");
-perfLi.style.height = "50px";
-perfLi.style.display = "flex";
+perfLi.style.height = "100px";
+perfLi.style.display = "grid";
+perfLi.style.gridTemplateColumns = "80px 80px";
+perfLi.style.gridAutoRows = "48px";
 perfLi.style.gap = "2px";
 stats.domElement.style.position = "static";
 gpuPanel.dom.title = "GPU queue completion FPS";
+jsHeapPanel.dom.title = "JavaScript heap used (Chromium performance.memory)";
+bufferPanel.dom.title = "Explicit WebGPU particle-buffer allocation";
 perfLi.appendChild(stats.domElement);
 perfLi.appendChild(gpuPanel.dom);
+if (window.performance.memory) {
+  perfLi.appendChild(jsHeapPanel.dom);
+}
+perfLi.appendChild(bufferPanel.dom);
 perfLi.classList.add("gui-stats");
 gui.__ul.appendChild(perfLi);
 
