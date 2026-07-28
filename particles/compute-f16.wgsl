@@ -1,3 +1,5 @@
+enable f16;
+
 struct Params {
   viewport: vec4f,
   clock: vec4f,
@@ -9,8 +11,9 @@ struct Params {
 }
 
 struct Particle {
-  pos_vel: vec4f,
-  life: vec4f,
+  position: vec2f,
+  velocity: vec2f,
+  life: vec4h,
 }
 
 @group(0) @binding(0) var<uniform> params: Params;
@@ -119,11 +122,12 @@ fn simulate(@builtin(global_invocation_id) id: vec3u) {
   }
 
   let current = particles[index];
-  var position = current.pos_vel.xy;
-  var velocity = current.pos_vel.zw;
-  var particle_time = current.life.x + params.clock.y * current.life.y / max(params.lifecycle.z, 0.00001);
-  var particle_duration = current.life.y;
-  var particle_alpha = current.life.z;
+  var position = current.position;
+  var velocity = current.velocity;
+  var particle_time = f32(current.life.x)
+    + params.clock.y * f32(current.life.y) / max(params.lifecycle.z, 0.00001);
+  var particle_duration = f32(current.life.y);
+  var particle_alpha = f32(current.life.z);
 
   if (params.system.y == 1u) {
     let n = f32(index);
@@ -203,11 +207,12 @@ fn simulate(@builtin(global_invocation_id) id: vec3u) {
     * particle_alpha
     * (0.6 + 0.4 * rand(vec2f(f32(index))));
 
-  particles[index].pos_vel = vec4f(position, velocity);
-  particles[index].life = vec4f(
-    particle_time,
-    particle_duration,
-    particle_alpha,
-    render_alpha
+  particles[index].position = position;
+  particles[index].velocity = velocity;
+  particles[index].life = vec4h(
+    f16(particle_time),
+    f16(particle_duration),
+    f16(particle_alpha),
+    f16(render_alpha)
   );
 }

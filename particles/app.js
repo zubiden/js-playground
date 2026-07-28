@@ -3,6 +3,17 @@ const stats = new Stats();
 const canvasParent = document.querySelector("#preview");
 const canvas = document.querySelector("canvas.gpu");
 const texcanvas = document.querySelector("canvas.tex");
+const query = new URLSearchParams(window.location.search);
+const benchmarkCanvasSize = Number(query.get("canvasSize")) || 0;
+window.__particlesReady = false;
+const queryNumber = (name, fallback) => {
+  const rawValue = query.get(name);
+  if (rawValue === null || rawValue === "") {
+    return fallback;
+  }
+  const value = Number(rawValue);
+  return Number.isFinite(value) ? value : fallback;
+};
 
 let W;
 let H;
@@ -13,23 +24,31 @@ let maskTexture;
 let uniformBuffer;
 let computePipeline;
 let renderPipeline;
-let particleBuffers = [];
-let computeBindGroups = [];
-let renderBindGroups = [];
-let bufferIndex = 0;
+let particleBuffer;
+let computeBindGroup;
+let renderBindGroup;
 let bufferParticlesCount = 0;
+let particleStride = 32;
+let supportsShaderF16 = false;
+let useShaderF16 = false;
 let reset = true;
 let running = true;
 let time = 0;
 let fadeOutTime = 0;
 let frameIndex = 0;
 let lastDrawTime = window.performance.now();
+const uniformData = new ArrayBuffer(112);
+const uniformFloats = new Float32Array(uniformData);
+const uniformUints = new Uint32Array(uniformData);
 
 const resize = () => {
-  const sz = Math.min(
-    700,
-    Math.min(canvasParent.clientWidth, canvasParent.clientHeight) * 0.6,
-  );
+  const sz =
+    benchmarkCanvasSize > 0
+      ? benchmarkCanvasSize
+      : Math.min(
+          700,
+          Math.min(canvasParent.clientWidth, canvasParent.clientHeight) * 0.6,
+        );
   texcanvas.style.width =
     texcanvas.style.height =
     canvas.style.width =
@@ -77,15 +96,15 @@ window.onresize = resize;
 resize();
 
 const GUI = {
-  particlesCount: 7000,
-  radius: window.devicePixelRatio * 1.6,
+  particlesCount: queryNumber("particles", 7000),
+  radius: queryNumber("radius", window.devicePixelRatio * 1.6),
   reset: () => {
     reset = true;
   },
   destroy: () => {
     die();
   },
-  seed: Math.random() * 10,
+  seed: queryNumber("seed", Math.random() * 10),
   noiseScale: 22,
   noiseSpeed: 0.6,
   forceMult: 0.6,
@@ -98,58 +117,59 @@ const GUI = {
   color: 0xffffff,
   fadeOut: false,
   fadeOutXY: [0, 0],
-  text: true,
+  text: query.get("text") !== "false",
   showTextTexture: false,
 };
 
+const updateDiagnostics = () => {
+  const particleBytes = bufferParticlesCount * particleStride;
+  const maskBytes = W * H * 4;
+  window.__particleDiagnostics = {
+    supportsShaderF16,
+    useShaderF16,
+    particleStride,
+    particleCount: bufferParticlesCount,
+    particleBytes,
+    maskBytes,
+    explicitGpuBytes: particleBytes + maskBytes + uniformData.byteLength,
+    canvasWidth: W,
+    canvasHeight: H,
+    textMaskEnabled: GUI.text,
+    workgroupSize: 128,
+    verticesPerParticle: 4,
+  };
+};
+
 const createParticleResources = (count) => {
-  for (const buffer of particleBuffers) {
-    buffer.destroy();
-  }
+  particleBuffer?.destroy();
 
   bufferParticlesCount = Math.max(1, Math.ceil(count));
-  const byteSize = bufferParticlesCount * 32;
-  particleBuffers = [0, 1].map((index) =>
-    device.createBuffer({
-      label: `particle-state-${index}`,
-      size: byteSize,
-      usage: GPUBufferUsage.STORAGE,
-    }),
-  );
+  const byteSize = bufferParticlesCount * particleStride;
+  particleBuffer = device.createBuffer({
+    label: "particle-state",
+    size: byteSize,
+    usage: GPUBufferUsage.STORAGE,
+  });
 
-  computeBindGroups = [
-    device.createBindGroup({
-      layout: computePipeline.getBindGroupLayout(0),
-      entries: [
-        { binding: 0, resource: { buffer: uniformBuffer } },
-        { binding: 1, resource: { buffer: particleBuffers[0] } },
-        { binding: 2, resource: { buffer: particleBuffers[1] } },
-        { binding: 3, resource: maskTexture.createView() },
-      ],
-    }),
-    device.createBindGroup({
-      layout: computePipeline.getBindGroupLayout(0),
-      entries: [
-        { binding: 0, resource: { buffer: uniformBuffer } },
-        { binding: 1, resource: { buffer: particleBuffers[1] } },
-        { binding: 2, resource: { buffer: particleBuffers[0] } },
-        { binding: 3, resource: maskTexture.createView() },
-      ],
-    }),
-  ];
+  computeBindGroup = device.createBindGroup({
+    layout: computePipeline.getBindGroupLayout(0),
+    entries: [
+      { binding: 0, resource: { buffer: uniformBuffer } },
+      { binding: 1, resource: { buffer: particleBuffer } },
+      { binding: 2, resource: maskTexture.createView() },
+    ],
+  });
 
-  renderBindGroups = particleBuffers.map((buffer) =>
-    device.createBindGroup({
-      layout: renderPipeline.getBindGroupLayout(0),
-      entries: [
-        { binding: 0, resource: { buffer: uniformBuffer } },
-        { binding: 1, resource: { buffer } },
-      ],
-    }),
-  );
+  renderBindGroup = device.createBindGroup({
+    layout: renderPipeline.getBindGroupLayout(0),
+    entries: [
+      { binding: 0, resource: { buffer: uniformBuffer } },
+      { binding: 1, resource: { buffer: particleBuffer } },
+    ],
+  });
 
-  bufferIndex = 0;
   reset = true;
+  updateDiagnostics();
 };
 
 const colorToRgb = (color) => {
@@ -183,8 +203,9 @@ function recreateMaskTexture() {
     { texture: maskTexture },
     [W, H],
   );
+  updateDiagnostics();
 
-  if (computePipeline && renderPipeline && particleBuffers.length) {
+  if (computePipeline && renderPipeline && particleBuffer) {
     createParticleResources(bufferParticlesCount);
   } else {
     reset = true;
@@ -192,20 +213,26 @@ function recreateMaskTexture() {
 }
 
 const writeUniforms = (deltaTime, fadeOutT) => {
-  const data = new ArrayBuffer(112);
-  const floats = new Float32Array(data);
-  const uints = new Uint32Array(data);
   const particleCount = Math.max(0, Math.ceil(GUI.particlesCount));
   const [red, green, blue] = colorToRgb(GUI.color);
 
-  floats.set([W, H, GUI.radius, 0], 0);
-  floats.set([time, deltaTime, GUI.seed, GUI.noiseScale], 4);
-  floats.set([GUI.noiseSpeed, GUI.noiseMovement, GUI.forceMult, GUI.dampingMult], 8);
-  floats.set([GUI.velocityMult, GUI.maxVelocity, GUI.longevity, fadeOutT], 12);
-  floats.set([GUI.fadeOutXY[0], GUI.fadeOutXY[1], GUI.text ? 1 : 0, 0], 16);
-  uints.set([particleCount, reset ? 1 : 0, frameIndex, 0], 20);
-  floats.set([red, green, blue, 1], 24);
-  device.queue.writeBuffer(uniformBuffer, 0, data);
+  uniformFloats.set([W, H, GUI.radius, 0], 0);
+  uniformFloats.set([time, deltaTime, GUI.seed, GUI.noiseScale], 4);
+  uniformFloats.set(
+    [GUI.noiseSpeed, GUI.noiseMovement, GUI.forceMult, GUI.dampingMult],
+    8,
+  );
+  uniformFloats.set(
+    [GUI.velocityMult, GUI.maxVelocity, GUI.longevity, fadeOutT],
+    12,
+  );
+  uniformFloats.set(
+    [GUI.fadeOutXY[0], GUI.fadeOutXY[1], GUI.text ? 1 : 0, 0],
+    16,
+  );
+  uniformUints.set([particleCount, reset ? 1 : 0, frameIndex, 0], 20);
+  uniformFloats.set([red, green, blue, 1], 24);
+  device.queue.writeBuffer(uniformBuffer, 0, uniformData);
 };
 
 const loadShader = async (path) => {
@@ -228,7 +255,12 @@ const init = async () => {
     throw new Error("No WebGPU adapter is available");
   }
 
-  device = await adapter.requestDevice();
+  supportsShaderF16 = adapter.features.has("shader-f16");
+  useShaderF16 = supportsShaderF16 && query.get("f16") !== "false";
+  particleStride = useShaderF16 ? 24 : 32;
+  device = await adapter.requestDevice({
+    requiredFeatures: useShaderF16 ? ["shader-f16"] : [],
+  });
   context = canvas.getContext("webgpu");
   format = navigator.gpu.getPreferredCanvasFormat();
   context.configure({
@@ -244,9 +276,10 @@ const init = async () => {
 
   recreateMaskTexture();
 
+  const shaderVariant = useShaderF16 ? "-f16" : "";
   const [computeCode, vertexCode, fragmentCode] = await Promise.all([
-    loadShader("./compute.wgsl"),
-    loadShader("./vertex.wgsl"),
+    loadShader(`./compute${shaderVariant}.wgsl`),
+    loadShader(`./vertex${shaderVariant}.wgsl`),
     loadShader("./fragment.wgsl"),
   ]);
   const computeModule = device.createShaderModule({ code: computeCode });
@@ -293,7 +326,7 @@ const init = async () => {
         },
       ],
     },
-    primitive: { topology: "triangle-list" },
+    primitive: { topology: "triangle-strip" },
   });
 
   createParticleResources(GUI.particlesCount);
@@ -328,16 +361,13 @@ const loop = () => {
   writeUniforms(dt, fadeOutT);
 
   const encoder = device.createCommandEncoder();
-  let writeBufferIndex = 1 - bufferIndex;
 
   if (fadeOutT < 1 && GUI.particlesCount > 0) {
     const computePass = encoder.beginComputePass();
     computePass.setPipeline(computePipeline);
-    computePass.setBindGroup(0, computeBindGroups[bufferIndex]);
+    computePass.setBindGroup(0, computeBindGroup);
     computePass.dispatchWorkgroups(Math.ceil(GUI.particlesCount / 128));
     computePass.end();
-  } else {
-    writeBufferIndex = bufferIndex;
   }
 
   const renderPass = encoder.beginRenderPass({
@@ -353,13 +383,12 @@ const loop = () => {
 
   if (fadeOutT < 1 && GUI.particlesCount > 0) {
     renderPass.setPipeline(renderPipeline);
-    renderPass.setBindGroup(0, renderBindGroups[writeBufferIndex]);
-    renderPass.draw(6, Math.ceil(GUI.particlesCount));
+    renderPass.setBindGroup(0, renderBindGroup);
+    renderPass.draw(4, Math.ceil(GUI.particlesCount));
   }
   renderPass.end();
 
   device.queue.submit([encoder.finish()]);
-  bufferIndex = writeBufferIndex;
   reset = false;
   frameIndex += 1;
   stats.end();
@@ -368,10 +397,8 @@ const loop = () => {
 
 const die = () => {
   running = false;
-  for (const buffer of particleBuffers) {
-    buffer.destroy();
-  }
-  particleBuffers = [];
+  particleBuffer?.destroy();
+  particleBuffer = undefined;
   uniformBuffer?.destroy();
   maskTexture?.destroy();
   device?.destroy();
@@ -418,7 +445,11 @@ canvas.onclick = (event) => {
 };
 
 init()
-  .then(loop)
+  .then(() => {
+    window.__particlesReady = true;
+    loop();
+  })
   .catch((error) => {
+    window.__particlesReady = false;
     console.error(error);
   });

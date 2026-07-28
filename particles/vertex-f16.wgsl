@@ -1,3 +1,5 @@
+enable f16;
+
 struct Params {
   viewport: vec4f,
   clock: vec4f,
@@ -9,8 +11,9 @@ struct Params {
 }
 
 struct Particle {
-  pos_vel: vec4f,
-  life: vec4f,
+  position: vec2f,
+  velocity: vec2f,
+  life: vec4h,
 }
 
 struct VertexOutput {
@@ -35,12 +38,12 @@ fn vertex_main(
   );
   let corner = corners[vertex_index];
   let particle = particles[instance_index];
-  let position_px = particle.pos_vel.xy + corner * params.viewport.z * 0.5;
+  let position_px = particle.position + corner * params.viewport.z * 0.5;
   let clip = position_px / params.viewport.xy * 2.0 - vec2f(1.0);
 
   var output: VertexOutput;
   output.position = vec4f(clip, 0.0, 1.0);
   output.uv = corner;
-  output.alpha = particle.life.w;
+  output.alpha = f32(particle.life.w);
   return output;
 }
