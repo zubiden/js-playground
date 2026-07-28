@@ -31,6 +31,8 @@ let particleBuffer;
 let computeBindGroup;
 let renderBindGroup;
 let bufferParticlesCount = 0;
+let particleResourceVersion = 0;
+let maskTextureVersion = 0;
 let particleStride = 32;
 let supportsShaderF16 = false;
 let useShaderF16 = false;
@@ -56,20 +58,31 @@ const memorySampleInterval = 1000;
 const maxFramesInFlight = 2;
 
 const resize = () => {
+  const mobileLayout = window.matchMedia("(max-width: 800px)").matches;
+  const availableSize = mobileLayout
+    ? canvasParent.clientWidth
+    : Math.min(canvasParent.clientWidth, canvasParent.clientHeight);
   const sz =
     benchmarkCanvasSize > 0
       ? benchmarkCanvasSize
-      : Math.min(
-          700,
-          Math.min(canvasParent.clientWidth, canvasParent.clientHeight) * 0.6,
-        );
+      : Math.min(700, availableSize * 0.6);
   texcanvas.style.width =
     texcanvas.style.height =
     canvas.style.width =
     canvas.style.height =
       `${sz}px`;
-  canvas.width = texcanvas.width = W = Math.floor(sz * window.devicePixelRatio);
-  canvas.height = texcanvas.height = H = Math.floor(sz * window.devicePixelRatio);
+
+  const nextWidth = Math.max(
+    1,
+    Math.floor(sz * window.devicePixelRatio),
+  );
+  const nextHeight = nextWidth;
+  if (nextWidth === W && nextHeight === H) {
+    return;
+  }
+
+  canvas.width = texcanvas.width = W = nextWidth;
+  canvas.height = texcanvas.height = H = nextHeight;
 
   const ctx = texcanvas.getContext("2d");
   ctx.clearRect(0, 0, W, H);
@@ -143,6 +156,8 @@ const updateDiagnostics = () => {
     useShaderF16,
     particleStride,
     particleCount: bufferParticlesCount,
+    particleResourceVersion,
+    maskTextureVersion,
     particleBytes,
     maskBytes,
     explicitGpuBytes: particleBytes + maskBytes + uniformData.byteLength,
@@ -176,6 +191,27 @@ const sampleMemory = (now) => {
   nextMemorySampleTime = now + memorySampleInterval;
 };
 
+const createComputeBindGroup = () => {
+  computeBindGroup = device.createBindGroup({
+    layout: computePipeline.getBindGroupLayout(0),
+    entries: [
+      { binding: 0, resource: { buffer: uniformBuffer } },
+      { binding: 1, resource: { buffer: particleBuffer } },
+      { binding: 2, resource: maskTexture.createView() },
+    ],
+  });
+};
+
+const createRenderBindGroup = () => {
+  renderBindGroup = device.createBindGroup({
+    layout: renderPipeline.getBindGroupLayout(0),
+    entries: [
+      { binding: 0, resource: { buffer: uniformBuffer } },
+      { binding: 1, resource: { buffer: particleBuffer } },
+    ],
+  });
+};
+
 const createParticleResources = (count) => {
   particleBuffer?.destroy();
 
@@ -186,23 +222,9 @@ const createParticleResources = (count) => {
     size: byteSize,
     usage: GPUBufferUsage.STORAGE,
   });
-
-  computeBindGroup = device.createBindGroup({
-    layout: computePipeline.getBindGroupLayout(0),
-    entries: [
-      { binding: 0, resource: { buffer: uniformBuffer } },
-      { binding: 1, resource: { buffer: particleBuffer } },
-      { binding: 2, resource: maskTexture.createView() },
-    ],
-  });
-
-  renderBindGroup = device.createBindGroup({
-    layout: renderPipeline.getBindGroupLayout(0),
-    entries: [
-      { binding: 0, resource: { buffer: uniformBuffer } },
-      { binding: 1, resource: { buffer: particleBuffer } },
-    ],
-  });
+  particleResourceVersion += 1;
+  createComputeBindGroup();
+  createRenderBindGroup();
 
   reset = true;
   updateDiagnostics();
@@ -234,6 +256,7 @@ function recreateMaskTexture() {
       GPUTextureUsage.COPY_DST |
       GPUTextureUsage.RENDER_ATTACHMENT,
   });
+  maskTextureVersion += 1;
   device.queue.copyExternalImageToTexture(
     { source: texcanvas },
     { texture: maskTexture },
@@ -241,8 +264,8 @@ function recreateMaskTexture() {
   );
   updateDiagnostics();
 
-  if (computePipeline && renderPipeline && particleBuffer) {
-    createParticleResources(bufferParticlesCount);
+  if (computePipeline && particleBuffer) {
+    createComputeBindGroup();
   } else {
     reset = true;
   }
