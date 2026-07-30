@@ -20,8 +20,26 @@ struct Particle {
 @group(0) @binding(1) var<storage, read_write> particles: array<Particle>;
 @group(0) @binding(2) var text_texture: texture_2d<f32>;
 
+const MASK_SPAWN_ATTEMPTS: u32 = 12u;
+
+fn hash_u32(value: u32) -> u32 {
+  var x = value + 0x9e3779b9u;
+  x = x ^ (x >> 16u);
+  x = x * 0x7feb352du;
+  x = x ^ (x >> 15u);
+  x = x * 0x846ca68bu;
+  return x ^ (x >> 16u);
+}
+
+fn random01(value: u32) -> f32 {
+  return f32(hash_u32(value) >> 8u) * (1.0 / 16777216.0);
+}
+
 fn rand(n: vec2f) -> f32 {
-  return fract(sin(dot(n, vec2f(12.9898, 4.1414 - params.clock.z * 0.42))) * 43758.5453);
+  let key = bitcast<u32>(n.x)
+    ^ hash_u32(bitcast<u32>(n.y))
+    ^ hash_u32(bitcast<u32>(params.clock.z));
+  return random01(key);
 }
 
 fn loop4(p: vec4f) -> vec4f {
@@ -86,32 +104,61 @@ fn curl_noise(p: vec3f) -> vec3f {
 }
 
 fn text_alpha(pos: vec2f) -> f32 {
-  let size = vec2f(textureDimensions(text_texture));
+  if (any(pos < vec2f(0.0)) || any(pos >= params.viewport.xy)) {
+    return 0.0;
+  }
+
+  let dimensions = textureDimensions(text_texture);
+  let size = vec2f(dimensions);
   let uv = vec2f(pos.x, params.viewport.y - pos.y) / params.viewport.xy;
-  return textureLoad(text_texture, vec2i(uv * size), 0).a;
+  let coordinate = clamp(
+    vec2i(uv * size),
+    vec2i(0),
+    vec2i(dimensions) - vec2i(1)
+  );
+  return textureLoad(text_texture, coordinate, 0).a;
+}
+
+fn spawn_candidate(index: u32, attempt: u32) -> vec2f {
+  let count = max(params.system.x, 1u);
+  let aspect = params.viewport.x / max(params.viewport.y, 1.0);
+  let columns = max(1u, u32(ceil(sqrt(f32(count) * aspect))));
+  let rows = (count + columns - 1u) / columns;
+  let cell_count = columns * rows;
+
+  let key = hash_u32(
+    index
+      ^ hash_u32(attempt + 1u)
+      ^ hash_u32(params.system.z)
+      ^ bitcast<u32>(params.clock.z)
+  );
+  let cell_index = select(
+    hash_u32(key ^ 0xa511e9b3u) % cell_count,
+    index % cell_count,
+    attempt == 0u
+  );
+  let cell = vec2u(cell_index % columns, cell_index / columns);
+  let jitter = vec2f(
+    random01(key),
+    random01(key ^ 0x68bc21ebu)
+  );
+
+  return (vec2f(cell) + jitter) / vec2f(f32(columns), f32(rows));
 }
 
 fn genpos(index: u32) -> vec2f {
-  let t = fract(params.clock.x / 50.0) * 50.0;
-  if (params.source.z > 0.0) {
-    var pos = vec2f(-10.0);
-    for (var i = 0u; i < 4u; i = i + 1u) {
-      if (text_alpha(pos * params.viewport.xy) >= 0.3) {
-        break;
-      }
-      let n = f32(index + i);
-      pos = vec2f(
-        rand(vec2f(42.0, -3.0) * vec2f(cos(n - params.clock.z), n)),
-        rand(vec2f(-3.0, 42.0) * vec2f(t * (t + f32(i)), sin(n + params.clock.z)))
-      );
-    }
-    return pos * params.viewport.xy;
+  if (params.source.z <= 0.0) {
+    return spawn_candidate(index, 0u) * params.viewport.xy;
   }
-  let n = f32(index);
-  return params.viewport.xy * vec2f(
-    rand(vec2f(42.0, -3.0) * vec2f(cos(n - params.clock.z), n)),
-    rand(vec2f(-3.0, 42.0) * vec2f(t * t, sin(n + params.clock.z)))
-  );
+
+  for (var attempt = 0u; attempt < MASK_SPAWN_ATTEMPTS; attempt = attempt + 1u) {
+    let position = spawn_candidate(index, attempt) * params.viewport.xy;
+    if (text_alpha(position) >= 0.3) {
+      return position;
+    }
+  }
+
+  return vec2f(-1.0);
 }
 
 @compute @workgroup_size(128)
@@ -135,17 +182,50 @@ fn simulate(@builtin(global_invocation_id) id: vec3u) {
     particle_duration = 0.5 + 2.0 * rand(vec2f(n) + params.clock.z * 32.4);
     position = genpos(index);
     velocity = vec2f(0.0);
-    particle_alpha = select(1.0, text_alpha(position), params.source.z > 0.5);
-  } else if (particle_time >= 1.0) {
-    particle_time = 0.0;
-    particle_duration = 0.5 + 2.0 * rand(vec2f(f32(index)) + position);
-    if (params.source.z > 0.5) {
-      position = genpos(index);
+    if (position.x < 0.0) {
+      particle_time = 0.0;
+      particle_alpha = -1.0;
+    } else if (params.source.z > 0.5) {
       particle_alpha = text_alpha(position);
     } else {
       particle_alpha = 1.0;
     }
+  } else if (particle_alpha < 0.0) {
+    position = genpos(index);
     velocity = vec2f(0.0);
+    if (position.x >= 0.0) {
+      particle_time = 0.0;
+      particle_duration = 0.5 + 2.0 * rand(vec2f(f32(index)) + position);
+      particle_alpha = text_alpha(position);
+    }
+  } else if (particle_time >= 1.0) {
+    particle_time = 0.0;
+    if (params.source.z > 0.5) {
+      position = genpos(index);
+      if (position.x < 0.0) {
+        particle_alpha = -1.0;
+      } else {
+        particle_duration = 0.5 + 2.0 * rand(vec2f(f32(index)) + position);
+        particle_alpha = text_alpha(position);
+      }
+    } else {
+      position = genpos(index);
+      particle_duration = 0.5 + 2.0 * rand(vec2f(f32(index)) + position);
+      particle_alpha = 1.0;
+    }
+    velocity = vec2f(0.0);
+  }
+
+  if (particle_alpha < 0.0) {
+    particles[index].position = vec2f(-1.0);
+    particles[index].velocity = vec2f(0.0);
+    particles[index].life = vec4h(
+      f16(0.0),
+      f16(particle_duration),
+      f16(-1.0),
+      f16(0.0)
+    );
+    return;
   }
 
   var text_velocity_mult = 1.0;
@@ -198,8 +278,25 @@ fn simulate(@builtin(global_invocation_id) id: vec3u) {
   if (outside && params.lifecycle.w < 0.1) {
     particle_time = 0.0;
     position = genpos(index);
-    particle_duration = 0.5 + 2.0 * rand(vec2f(f32(index)) + position);
     velocity = vec2f(0.0);
+    if (position.x < 0.0) {
+      particle_alpha = -1.0;
+    } else {
+      particle_duration = 0.5 + 2.0 * rand(vec2f(f32(index)) + position);
+      particle_alpha = select(1.0, text_alpha(position), params.source.z > 0.5);
+    }
+  }
+
+  if (particle_alpha < 0.0) {
+    particles[index].position = vec2f(-1.0);
+    particles[index].velocity = vec2f(0.0);
+    particles[index].life = vec4h(
+      f16(0.0),
+      f16(particle_duration),
+      f16(-1.0),
+      f16(0.0)
+    );
+    return;
   }
 
   let render_alpha = sin(particle_time * 3.14)
