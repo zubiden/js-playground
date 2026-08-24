@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mediabunny transparent WebM</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; }
+    body {
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      background-color: #ddd;
+      background-image:
+        linear-gradient(45deg, #bbb 25%, transparent 25%),
+        linear-gradient(-45deg, #bbb 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #bbb 75%),
+        linear-gradient(-45deg, transparent 75%, #bbb 75%);
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+      background-size: 16px 16px;
+    }
+    canvas {
+      display: block;
+      width: auto;
+      height: auto;
+      max-width: 100vw;
+      max-height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <canvas></canvas>
+
+  <script src="https://mrdoob.github.io/stats.js/build/stats.min.js"></script>
+  <script type="module">
+    import {
+      Input,
+      MATROSKA,
+      UrlSource,
+      VideoSampleSink,
+      WEBM,
+    } from 'https://cdn.jsdelivr.net/npm/mediabunny@1.55.2/+esm';
+
+    const canvas = document.querySelector('canvas');
+    const stats = new Stats();
+    const memoryPanel = performance.memory
+      ? new Stats.Panel('JS MB', '#f08', '#201')
+      : null;
+
+    stats.showPanel(0);
+    Object.assign(stats.dom.style, { position: 'fixed', left: '0', top: '0' });
+    document.body.append(stats.dom);
+
+    if (memoryPanel) {
+      Object.assign(memoryPanel.dom.style, { position: 'fixed', left: '80px', top: '0' });
+      document.body.append(memoryPanel.dom);
+    }
+
+    const waitUntil = async (deadline) => {
+      const remaining = deadline - performance.now();
+      if (remaining > 18) {
+        await new Promise((resolve) => setTimeout(resolve, remaining - 8));
+      }
+      await new Promise(requestAnimationFrame);
+    };
+
+    const input = new Input({
+      formats: [MATROSKA, WEBM],
+      source: new UrlSource('./assets/transparent.webm'),
+    });
+    const track = await input.getPrimaryVideoTrack();
+    if (!track || !(await track.canDecode())) {
+      throw new Error('The transparent WebM video cannot be decoded in this browser.');
+    }
+
+    const [width, height, firstTimestamp, endTimestamp] = await Promise.all([
+      track.getDisplayWidth(),
+      track.getDisplayHeight(),
+      track.getFirstTimestamp(),
+      input.computeDuration([track]),
+    ]);
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d', { alpha: true });
+    const sink = new VideoSampleSink(track);
+    const loopDuration = endTimestamp - firstTimestamp;
+    let lastMemoryUpdate = 0;
+
+    while (true) {
+      const loopStart = performance.now();
+
+      for await (const sample of sink.samples(firstTimestamp, endTimestamp)) {
+        await waitUntil(loopStart + (sample.timestamp - firstTimestamp) * 1000);
+        stats.begin();
+        context.clearRect(0, 0, width, height);
+        sample.draw(context, 0, 0, width, height);
+        sample.close();
+
+        const now = performance.now();
+        if (memoryPanel && now - lastMemoryUpdate >= 500) {
+          const used = performance.memory.usedJSHeapSize / 1048576;
+          const limit = performance.memory.jsHeapSizeLimit / 1048576;
+          memoryPanel.update(used, limit);
+          lastMemoryUpdate = now;
+        }
+        stats.end();
+      }
+
+      await waitUntil(loopStart + loopDuration * 1000);
+    }
+  </script>
+</body>
+</html>
